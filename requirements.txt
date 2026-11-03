@@ -1,4 +1,7 @@
-streamlit==1.39.0
+streamlit
 pandas
+pydeck
+requests
+plotly
 folium
 streamlit-folium
