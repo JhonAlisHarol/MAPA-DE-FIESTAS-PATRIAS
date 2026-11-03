@@ -3,8 +3,6 @@ import pandas as pd
 import folium
 from folium.plugins import HeatMap, MarkerCluster, Fullscreen
 from streamlit_folium import st_folium
-import base64
-import glob
 import html
 
 st.set_page_config(
@@ -13,76 +11,45 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. CARGA DE VIDEO DE FONDO CON CACHÉ ---
-@st.cache_data
-def obtener_video_base64():
-    archivos_video = glob.glob("*VIDEO*.mp4") + glob.glob("*video*.mp4") + glob.glob("*.mp4")
-    if archivos_video:
-        try:
-            with open(archivos_video[0], "rb") as f:
-                return base64.b64encode(f.read()).decode()
-        except Exception:
-            pass
-    return ""
-
-video_base64 = obtener_video_base64()
-
-# --- 2. ESTILOS VISUALES Y EFECTOS NEÓN CORPORATIVOS ---
-st.markdown(f"""
+# --- ESTILOS VISUALES Y FONDO TÁCTICO LIGERO ---
+st.markdown("""
     <style>
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
-    .stDeployButton {{display: none !important;}}
-    div[data-testid="stToolbar"] {{display: none !important;}}
-    button[kind="header"] {{display: none !important;}}
-    .viewerBadge_container__1QSob {{display: none !important;}}
-    iframe[title="streamlit/streamlit/static"] {{display: none !important;}}
-    div.creator-badge {{display: none !important;}}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display: none !important;}
+    div[data-testid="stToolbar"] {display: none !important;}
+    button[kind="header"] {display: none !important;}
     
-    .video-background {{
+    /* Fondo táctico oscuro en lugar de video para no colapsar la RAM */
+    .bg-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        z-index: -99999;
-        overflow: hidden;
-        pointer-events: none;
-    }}
-    .video-background video {{
-        width: 100vw;
-        height: 100vh;
-        object-fit: cover;
-    }}
-
-    .bg-overlay {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(11, 15, 25, 0.78);
+        background: radial-gradient(circle at center, #1b365d 0%, #0b0f19 80%);
         z-index: -99998;
         pointer-events: none;
-    }}
+    }
 
-    .stApp, .block-container, [data-testid="stVerticalBlock"] {{
+    .stApp, .block-container, [data-testid="stVerticalBlock"] {
         background: transparent !important;
         color: #ffffff;
-    }}
+    }
     
-    [data-testid="stSidebar"] {{
-        background-color: rgba(11, 15, 25, 0.90) !important;
-    }}
+    [data-testid="stSidebar"] {
+        background-color: rgba(11, 15, 25, 0.95) !important;
+        border-right: 1px solid #1b365d;
+    }
     
-    @keyframes neonBorderMove {{
-        0% {{ background-position: 0% 50%; }}
-        50% {{ background-position: 100% 50%; }}
-        100% {{ background-position: 0% 50%; }}
-    }}
+    @keyframes neonBorderMove {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
 
-    .neon-title-container {{
+    .neon-title-container {
         border: 4px solid transparent;
         background: linear-gradient(135deg, rgba(16, 24, 40, 0.9) 0%, rgba(11, 15, 25, 0.9) 100%), 
                     linear-gradient(90deg, #ff0055, #00ffff, #00ff66, #ffae00, #bd00ff, #ff0055);
@@ -95,35 +62,29 @@ st.markdown(f"""
         text-align: center;
         box-shadow: 0 0 25px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(255, 0, 85, 0.3);
         margin-bottom: 20px;
-    }}
+    }
     
-    .neon-title-text {{
+    .neon-title-text {
         color: #00ffff;
         font-size: 26px;
         font-weight: 800;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         letter-spacing: 1.5px;
         text-shadow: 0 0 15px rgba(0, 255, 255, 0.9), 0 0 25px rgba(255, 0, 85, 0.6);
-    }}
+    }
     
-    .neon-sub-text {{
+    .neon-sub-text {
         color: #ffae00;
         font-size: 13px;
         font-style: italic;
         margin-top: 8px;
         text-shadow: 0 0 10px rgba(255, 174, 0, 0.8);
-    }}
+    }
     </style>
-    
-    <div class="video-background">
-        <video autoplay loop muted playsinline>
-            <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-        </video>
-    </div>
     <div class="bg-overlay"></div>
 """, unsafe_allow_html=True)
 
-# --- 3. AUTENTICACIÓN DE USUARIOS ---
+# --- AUTENTICACIÓN DE USUARIOS ---
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
@@ -168,7 +129,7 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 4. CONEXIÓN A GOOGLE SHEETS Y PROCESAMIENTO ---
+    # --- CONEXIÓN A GOOGLE SHEETS ---
     @st.cache_data(ttl=30)
     def cargar_datos_bitacora():
         url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
@@ -189,7 +150,7 @@ else:
     try:
         df = cargar_datos_bitacora()
 
-        # Limpieza y detección flexible de coordenadas
+        # Limpieza de coordenadas
         col_lat = next((c for c in df.columns if "LAT" in c), None)
         col_lon = next((c for c in df.columns if "LON" in c or "LNG" in c), None)
 
@@ -207,7 +168,7 @@ else:
         else:
             df_geo = pd.DataFrame()
 
-        # Identificación de columnas descriptivas
+        # Identificación de columnas
         col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
         col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
         col_hora = next((c for c in df.columns if "HORA" in c), None)
@@ -216,14 +177,12 @@ else:
         col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
         col_img = next((c for c in df.columns if "IMAGEN" in c or "EVIDENCIA" in c or "FOTO" in c or "URL" in c or "IMG" in c), None)
 
-        # --- PANEL LATERAL OPERATIVO ---
+        # --- PANEL LATERAL ---
         with st.sidebar:
             st.write(f"👤 Operador: **{st.session_state.get('usuario_actual', 'Operador')}**")
-            
             if st.button("🔄 Refrescar Bitácora", use_container_width=True):
                 st.cache_data.clear()
                 st.rerun()
-
             if st.button("Cerrar Sesión", use_container_width=True):
                 st.session_state.autenticado = False
                 st.rerun()
@@ -252,10 +211,8 @@ else:
                 overlay=False,
                 control=True
             ).add_to(m)
-
             Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-            # Función para crear el popup táctico interno al hacer clic
             def generar_popup_html(row, idx):
                 num_ev = str(row.get(col_num, idx + 1)).replace(".0", "")
                 if len(num_ev) > 15:
@@ -286,7 +243,7 @@ else:
                             <a href="{url_img}" target="_blank">
                                 <img src="{url_img}" style="width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
                             </a>
-                            <div style="font-size: 10px; color: #a0aec0; margin-top: 3px;">(Clic en la foto para ampliar)</div>
+                            <div style="font-size: 10px; color: #a0aec0; margin-top: 3px;">(Clic para ampliar)</div>
                         </div>
                         """
 
@@ -307,32 +264,18 @@ else:
                 </div>
                 """, num_ev
 
-            # --- CAPA 2: MAPA DE CALOR ---
             if "Calor" in modo_mapa:
                 heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
-                HeatMap(
-                    heat_data,
-                    min_opacity=0.45,
-                    max_zoom=14,
-                    radius=18,
-                    blur=22,
-                    gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}
-                ).add_to(m)
-
-            # --- CAPAS 1 y 3: CLUSTER O INDIVIDUALES ---
+                HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
             else:
                 es_cluster = "Cluster" in modo_mapa
                 if es_cluster:
-                    # El MarkerCluster nativo agrupa y muestra la cantidad (ej. "5", "10") automáticamente.
                     grupo_marcadores = MarkerCluster(maxClusterRadius=45).add_to(m)
                 else:
                     grupo_marcadores = m
 
                 for idx, row in df_geo.iterrows():
                     popup_content, id_num = generar_popup_html(row, idx)
-
-                    # Se utiliza el pin estándar de Leaflet/Folium en lugar de los números.
-                    # Si es Cluster, el mapa contará y agrupará estos pines por sector automáticamente.
                     folium.Marker(
                         location=[row['Lat_clean'], row['Lon_clean']],
                         icon=folium.Icon(color='red', icon='info-sign'), 
@@ -341,9 +284,8 @@ else:
                     ).add_to(grupo_marcadores)
 
             st_folium(m, height=750, use_container_width=True)
-            st.success(f"🗺️ Visualizando **{len(df_geo):,}** incidentes georreferenciados en el mapa táctico.")
         else:
-            st.warning("⚠️ No se encontraron las columnas 'LATITUD' y 'LONGITUD'. Asegúrate de que estén escritas así en Google Sheets.")
+            st.warning("⚠️ No se encontraron coordenadas válidas.")
             
     except Exception as e:
         st.error(f"Error procesando la bitácora: {e}")
