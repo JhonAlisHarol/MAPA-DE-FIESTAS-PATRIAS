@@ -110,7 +110,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS (BLINDADA) ---
+# --- CONEXIÓN A GOOGLE SHEETS ---
 @st.cache_data(ttl=45)
 def cargar_datos_bitacora():
     url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
@@ -538,7 +538,7 @@ try:
                         if re.search(patron_kws, frase):
                             numeros = re.findall(r'\b(\d+)\b', frase)
                             if numeros:
-                                total += int(numeros[0])
+                                total += sum(int(n) for n in numeros)
                     return total
 
                 # --- KPIS SUPERIORES DE ACCIONES ---
@@ -609,7 +609,7 @@ try:
                 resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
                 
                 if not resumen_acciones.empty:
-                    # Limpiar provincias y categorías vacías
+                    # Ocultar provincias vacías y filas de acciones en 0
                     resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
                     resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
                     
@@ -617,7 +617,7 @@ try:
                     resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
                     
                     if not resumen_acciones_t.empty:
-                        # --- NUEVO: FILA DE TOTAL GENERAL EN LA PARTE INFERIOR ---
+                        # Fila de TOTAL GENERAL
                         totales_columnas = resumen_acciones_t.sum(axis=0)
                         totales_columnas.name = 'TOTAL GENERAL'
                         resumen_acciones_t = pd.concat([resumen_acciones_t, pd.DataFrame(totales_columnas).T])
