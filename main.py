@@ -127,6 +127,16 @@ def cargar_datos_bitacora():
     df = df.reset_index(drop=True)
     return df
 
+# Función auxiliar para extraer la hora como número entero (0-23)
+def extraer_hora(hora_str):
+    try:
+        hora_str = str(hora_str).strip()
+        if ':' in hora_str:
+            return int(hora_str.split(':')[0])
+        return int(float(hora_str))
+    except:
+        return -1
+
 try:
     df = cargar_datos_bitacora()
 
@@ -156,9 +166,11 @@ try:
     col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
 
-    # Convertir fechas para el filtro
+    # Convertir fechas y horas para el filtro
     if col_dia and not df_geo.empty:
         df_geo['Fecha_dt'] = pd.to_datetime(df_geo[col_dia], dayfirst=True, errors='coerce')
+    if col_hora and not df_geo.empty:
+        df_geo['Hora_int'] = df_geo[col_hora].apply(extraer_hora)
 
     # --- PANEL LATERAL Y FILTROS ---
     with st.sidebar:
@@ -170,13 +182,15 @@ try:
             
         st.markdown("---")
         
-        st.markdown("#### 📅 Fecha de Reporte")
-        hoy = datetime.date.today()
-        rango_fechas = st.date_input(
-            "Seleccione rango (Desde - Hasta):",
-            value=(datetime.date(hoy.year, 11, 1), datetime.date(hoy.year, 11, 30)),
-            format="DD/MM/YYYY"
-        )
+        # NUEVO: Filtro Rango Temporal
+        st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
+        fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 1, 1))
+        fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
+        
+        hora_inicial = st.selectbox("Hora Inicial:", options=list(range(24)), index=0)
+        hora_final = st.selectbox("Hora Final:", options=list(range(24)), index=23)
+        
+        st.markdown("---")
         
         centro_seleccionado = "TODOS"
         if col_centro and not df_geo.empty:
@@ -184,12 +198,17 @@ try:
             lista_centros = ["TODOS"] + sorted([str(x) for x in df_geo[col_centro].dropna().unique() if str(x).strip() != ""])
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # Aplicar filtros
+    # --- APLICAR FILTROS ---
+    # 1. Filtro de Fechas
     if col_dia and 'Fecha_dt' in df_geo.columns:
-        if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
-            fecha_inicio, fecha_fin = rango_fechas
-            df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
+        df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
+    
+    # 2. Filtro de Horas
+    if col_hora and 'Hora_int' in df_geo.columns:
+        # Mantenemos los -1 (horas que no se pudieron detectar por estar vacías) para no perder datos vitales por error humano en Excel
+        df_geo = df_geo[((df_geo['Hora_int'] >= hora_inicial) & (df_geo['Hora_int'] <= hora_final)) | (df_geo['Hora_int'] == -1)]
             
+    # 3. Filtro de Centro
     if col_centro and centro_seleccionado != "TODOS":
         df_geo = df_geo[df_geo[col_centro].astype(str) == centro_seleccionado]
 
@@ -324,10 +343,35 @@ try:
                 folium.Marker(
                     location=[row['Lat_clean'], row['Lon_clean']],
                     icon=icono_patrio, 
-                    popup=folium.Popup(popup_content, max_width=500, show=False)
+                    popup=folium.Popup(popup_content, max_width=320, show=False)
                 ).add_to(grupo_marcadores)
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
+        
+        # --- TABLERO TÁCTICO DE ZONAS (NUEVO) ---
+        if col_zona:
+            st.markdown("""
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 15px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        📊 RESUMEN OPERATIVO POR ZONA POLICIAL
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            resumen_zonas = df_geo[col_zona].value_counts().reset_index()
+            resumen_zonas.columns = ['Zona Policial', 'Cantidad']
+            
+            # Crear columnas dinámicas (hasta 4 por fila)
+            cols = st.columns(4)
+            for idx, row in resumen_zonas.iterrows():
+                col_idx = idx % 4
+                with cols[col_idx]:
+                    st.markdown(f"""
+                    <div style="background: rgba(11, 15, 25, 0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: center; box-shadow: 0 0 15px rgba(0,255,255,0.2);">
+                        <h4 style="margin: 0; color: #e2e8f0; font-size: 14px;">{row['Zona Policial']}</h4>
+                        <h2 style="margin: 8px 0 0 0; color: #ff0055; font-size: 32px; text-shadow: 0 0 15px rgba(255,0,85,0.6);">{row['Cantidad']}</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
         
     else:
         st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
