@@ -217,7 +217,7 @@ try:
         if col_centro and centro_seleccionado != "TODOS":
             df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
 
-        # --- PREPARACIÓN DEL MAPA ---
+        # --- PREPARACIÓN DEL MAPA PRINCIPAL ---
         if col_lat and col_lon:
             df_mapa['Lat_clean'] = pd.to_numeric(
                 df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
@@ -232,278 +232,206 @@ try:
         else:
             df_geo = pd.DataFrame()
 
-        # --- CONTADOR DE INCIDENTES / EVENTOS EN LA BARRA LATERAL ---
+        # Contador de Casos en barra lateral
         with st.sidebar:
             st.markdown("---")
             st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
 
-        # --- MÉTRICAS SUPERIORES DE LLAMADAS (SLA) ---
-        if len(cols_ll_rec) > 0:
-            st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
-            opcion_sla = st.radio(
-                "Centro SLA:",
-                ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
+        # --- SISTEMA DE PESTAÑAS (TABS) ---
+        pestania_operativa, pestania_presentacion = st.tabs(["🗺️ Tablero Operativo Táctico", "📊 Presentación Operaciones"])
+
+        # ==========================================
+        # PESTAÑA 1: TABLERO OPERATIVO TÁCTICO
+        # ==========================================
+        with pestania_operativa:
+            if len(cols_ll_rec) > 0:
+                st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
+                opcion_sla = st.radio(
+                    "Centro SLA:",
+                    ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="radio_sla"
+                )
+                st.write("") 
+                
+                def sumar_col(col_name, df_datos):
+                    if col_name and col_name in df_datos.columns:
+                        return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
+                    return 0
+
+                if "AMBOS" in opcion_sla:
+                    t_rec = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
+                    t_cont = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
+                    t_aban = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
+                    t_crea = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
+                elif "CON-C5" in opcion_sla:
+                    t_rec = sumar_col(col_rec_c5, df_llamadas)
+                    t_cont = sumar_col(col_cont_c5, df_llamadas)
+                    t_aban = sumar_col(col_aban_c5, df_llamadas)
+                    t_crea = sumar_col(col_crea_c5, df_llamadas)
+                elif "CORCOL" in opcion_sla:
+                    t_rec = sumar_col(col_rec_corcol, df_llamadas)
+                    t_cont = sumar_col(col_cont_corcol, df_llamadas)
+                    t_aban = sumar_col(col_aban_corcol, df_llamadas)
+                    t_crea = sumar_col(col_crea_corcol, df_llamadas)
+                    
+                pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
+                
+                st.markdown(f"""
+                <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. RECIBIDAS</div>
+                        <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. CONTESTADAS</div>
+                        <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. ABANDONADAS</div>
+                        <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">INCIDENTES CREADOS</div>
+                        <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">% PRODUCTIVIDAD</div>
+                        <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod:.1f}%</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            modo_mapa = st.radio(
+                "Capa de Visualización Táctica:",
+                ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
+                index=0,
                 horizontal=True,
-                label_visibility="collapsed"
+                key="radio_modo_mapa"
             )
-            st.write("") 
-            
-            def sumar_col(col_name, df_datos):
-                if col_name and col_name in df_datos.columns:
-                    return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
-                return 0
 
-            if "AMBOS" in opcion_sla:
-                t_rec = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
-                t_cont = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
-                t_aban = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
-                t_crea = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
-            elif "CON-C5" in opcion_sla:
-                t_rec = sumar_col(col_rec_c5, df_llamadas)
-                t_cont = sumar_col(col_cont_c5, df_llamadas)
-                t_aban = sumar_col(col_aban_c5, df_llamadas)
-                t_crea = sumar_col(col_crea_c5, df_llamadas)
-            elif "CORCOL" in opcion_sla:
-                t_rec = sumar_col(col_rec_corcol, df_llamadas)
-                t_cont = sumar_col(col_cont_corcol, df_llamadas)
-                t_aban = sumar_col(col_aban_corcol, df_llamadas)
-                t_crea = sumar_col(col_crea_corcol, df_llamadas)
-                
-            pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
-            
-            st.markdown(f"""
-            <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
-                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. RECIBIDAS</div>
-                    <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec:,}</div>
-                </div>
-                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
-                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. CONTESTADAS</div>
-                    <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont:,}</div>
-                </div>
-                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
-                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. ABANDONADAS</div>
-                    <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban:,}</div>
-                </div>
-                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
-                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">INCIDENTES CREADOS</div>
-                    <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea:,}</div>
-                </div>
-                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">% PRODUCTIVIDAD</div>
-                    <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod:.1f}%</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            if not df_geo.empty:
+                lat_centro = df_geo['Lat_clean'].median()
+                lon_centro = df_geo['Lon_clean'].median()
 
-        modo_mapa = st.radio(
-            "Capa de Visualización Táctica:",
-            ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
-            index=0,
-            horizontal=True
-        )
+                m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11, prefer_canvas=True)
+                folium.TileLayer(
+                    tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                    attr='Google Hybrid',
+                    name='Google Hybrid',
+                    overlay=False,
+                    control=True
+                ).add_to(m)
 
-        if not df_geo.empty:
-            lat_centro = df_geo['Lat_clean'].median()
-            lon_centro = df_geo['Lon_clean'].median()
+                Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-            m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11, prefer_canvas=True)
-            folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google Hybrid',
-                name='Google Hybrid',
-                overlay=False,
-                control=True
-            ).add_to(m)
+                def generar_popup_html(row, idx):
+                    num_ev_raw = str(row[col_num]).replace(".0", "") if col_num and pd.notna(row[col_num]) else str(idx + 1)
+                    num_ev = num_ev_raw if len(num_ev_raw) <= 15 else str(idx + 1)
+                    
+                    dia_ev = str(row[col_dia]) if col_dia and pd.notna(row[col_dia]) else 'N/A'
+                    hora_ev = str(row[col_hora]) if col_hora and pd.notna(row[col_hora]) else 'N/A'
+                    zona_ev = str(row[col_zona]) if col_zona and pd.notna(row[col_zona]) else 'N/A'
+                    centro_ev = str(row[col_centro]) if col_centro and pd.notna(row[col_centro]) else 'N/A'
+                    raw_rep = str(row[col_rep]) if col_rep and pd.notna(row[col_rep]) else 'Sin detalle registrado'
+                    
+                    rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
 
-            Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
+                    url_img = ""
+                    for val in row.values:
+                        val_str = str(val).strip()
+                        if "http" in val_str and ("drive.google.com" in val_str or ".jpg" in val_str or ".png" in val_str):
+                            url_img = val_str
+                            break
+                        elif "drive.google.com" in val_str:
+                            url_img = "https://" + val_str
+                            break
 
-            def generar_popup_html(row, idx):
-                num_ev_raw = str(row[col_num]).replace(".0", "") if col_num and pd.notna(row[col_num]) else str(idx + 1)
-                num_ev = num_ev_raw if len(num_ev_raw) <= 15 else str(idx + 1)
-                
-                dia_ev = str(row[col_dia]) if col_dia and pd.notna(row[col_dia]) else 'N/A'
-                hora_ev = str(row[col_hora]) if col_hora and pd.notna(row[col_hora]) else 'N/A'
-                zona_ev = str(row[col_zona]) if col_zona and pd.notna(row[col_zona]) else 'N/A'
-                centro_ev = str(row[col_centro]) if col_centro and pd.notna(row[col_centro]) else 'N/A'
-                raw_rep = str(row[col_rep]) if col_rep and pd.notna(row[col_rep]) else 'Sin detalle registrado'
-                
-                rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
+                    html_foto = ""
+                    if url_img:
+                        url_mostrar = url_img 
+                        id_foto = ""
+                        if "drive.google.com" in url_img:
+                            try:
+                                if "/d/" in url_img:
+                                    id_foto = url_img.split("/d/")[1].split("/")[0]
+                                elif "id=" in url_img:
+                                    id_foto = url_img.split("id=")[1].split("&")[0]
+                                if id_foto:
+                                    url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
+                            except:
+                                pass
 
-                url_img = ""
-                for val in row.values:
-                    val_str = str(val).strip()
-                    if "http" in val_str and ("drive.google.com" in val_str or ".jpg" in val_str or ".png" in val_str):
-                        url_img = val_str
-                        break
-                    elif "drive.google.com" in val_str:
-                        url_img = "https://" + val_str
-                        break
+                        html_foto = f"""
+                        <div style="margin-top: 10px; text-align: center; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px solid #1b365d;">
+                            <a href="{url_img}" target="_blank" style="text-decoration: none; color: #00ffff; font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; padding: 4px; background: rgba(0,255,255,0.1); border-radius: 4px;">
+                                📸 Abrir Evidencia Original
+                            </a>
+                            <a href="{url_img}" target="_blank">
+                                <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
+                            </a>
+                        </div>
+                        """
 
-                html_foto = ""
-                if url_img:
-                    url_mostrar = url_img 
-                    id_foto = ""
-                    if "drive.google.com" in url_img:
-                        try:
-                            if "/d/" in url_img:
-                                id_foto = url_img.split("/d/")[1].split("/")[0]
-                            elif "id=" in url_img:
-                                id_foto = url_img.split("id=")[1].split("&")[0]
-                            if id_foto:
-                                url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
-                        except:
-                            pass
-
-                    html_foto = f"""
-                    <div style="margin-top: 10px; text-align: center; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px solid #1b365d;">
-                        <a href="{url_img}" target="_blank" style="text-decoration: none; color: #00ffff; font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; padding: 4px; background: rgba(0,255,255,0.1); border-radius: 4px;">
-                            📸 Abrir Evidencia Original
-                        </a>
-                        <a href="{url_img}" target="_blank">
-                            <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
-                        </a>
+                    return f"""
+                    <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c; text-shadow: none;">
+                        <div style="background-color: #1b365d; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 13px;">
+                            🚨 CASO N° {num_ev} — {hora_ev}
+                        </div>
+                        <div style="padding: 8px; border: 1px solid #cbd5e0; background: #ffffff; border-radius: 0 0 4px 4px;">
+                            <p style="margin: 2px 0;"><b>Fecha:</b> {dia_ev}</p>
+                            <p style="margin: 2px 0;"><b>Zona Policial:</b> {zona_ev}</p>
+                            <p style="margin: 2px 0;"><b>Ubicación:</b> {centro_ev}</p>
+                            <div style="background: #f7fafc; border-left: 3px solid #00ffff; padding: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto;">
+                                <b>Reporte:</b><br>{rep_limpio}
+                            </div>
+                            {html_foto}
+                        </div>
                     </div>
                     """
 
-                return f"""
-                <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c; text-shadow: none;">
-                    <div style="background-color: #1b365d; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 13px;">
-                        🚨 CASO N° {num_ev} — {hora_ev}
-                    </div>
-                    <div style="padding: 8px; border: 1px solid #cbd5e0; background: #ffffff; border-radius: 0 0 4px 4px;">
-                        <p style="margin: 2px 0;"><b>Fecha:</b> {dia_ev}</p>
-                        <p style="margin: 2px 0;"><b>Zona Policial:</b> {zona_ev}</p>
-                        <p style="margin: 2px 0;"><b>Ubicación:</b> {centro_ev}</p>
-                        <div style="background: #f7fafc; border-left: 3px solid #00ffff; padding: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto;">
-                            <b>Reporte:</b><br>{rep_limpio}
-                        </div>
-                        {html_foto}
-                    </div>
-                </div>
-                """
-
-            if "Calor" in modo_mapa:
-                heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
-                HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
-            else:
-                es_cluster = "Cluster" in modo_mapa
-                if es_cluster:
-                    grupo_marcadores = MarkerCluster(maxClusterRadius=45, disableClusteringAtZoom=16).add_to(m)
+                if "Calor" in modo_mapa:
+                    heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
+                    HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
                 else:
-                    grupo_marcadores = m
+                    es_cluster = "Cluster" in modo_mapa
+                    if es_cluster:
+                        grupo_marcadores = MarkerCluster(maxClusterRadius=45, disableClusteringAtZoom=16).add_to(m)
+                    else:
+                        grupo_marcadores = m
 
-                for idx, row in df_geo.iterrows():
-                    popup_content = generar_popup_html(row, idx)
+                    for idx, row in df_geo.iterrows():
+                        popup_content = generar_popup_html(row, idx)
 
-                    icono_patrio = folium.DivIcon(
-                        html=f"""
-                        <div style="
-                            background-color: rgba(11, 15, 25, 0.9);
-                            border: 2px solid #00ffff;
-                            border-radius: 50%;
-                            width: 32px;
-                            height: 32px;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            box-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
-                            overflow: hidden;
-                        ">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" style="width: 20px; height: 14px; object-fit: cover; border-radius: 2px;">
-                        </div>
-                        """
-                    )
-
-                    folium.Marker(
-                        location=[row['Lat_clean'], row['Lon_clean']],
-                        icon=icono_patrio, 
-                        popup=folium.Popup(popup_content, max_width=320, show=False)
-                    ).add_to(grupo_marcadores)
-
-            st_folium(m, height=750, use_container_width=True, returned_objects=[])
-            
-            # --- TABLEROS TÁCTICOS (CENTROS Y ZONAS) ---
-            if col_centro:
-                st.markdown("""
-                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                            🏢 RESUMEN OPERATIVO POR CENTRO
-                        </h3>
-                    </div>
-                """, unsafe_allow_html=True)
-                resumen_centros = df_geo[col_centro].value_counts().reset_index()
-                resumen_centros.columns = ['Centro', 'Cantidad']
-                if not resumen_centros.empty:
-                    cols_c = st.columns(6) 
-                    for idx, row in resumen_centros.iterrows():
-                        col_idx = idx % 6
-                        with cols_c[col_idx]:
-                            st.markdown(f"""
-                            <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
-                                <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                                    {row['Centro']}
-                                </div>
-                                <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
-                                    {row['Cantidad']}
-                                </div>
+                        icono_patrio = folium.DivIcon(
+                            html=f"""
+                            <div style="
+                                background-color: rgba(11, 15, 25, 0.9);
+                                border: 2px solid #00ffff;
+                                border-radius: 50%;
+                                width: 32px;
+                                height: 32px;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                box-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
+                                overflow: hidden;
+                            ">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" style="width: 20px; height: 14px; object-fit: cover; border-radius: 2px;">
                             </div>
-                            """, unsafe_allow_html=True)
+                            """
+                        )
 
-            col_grupo_prov = col_provincia if col_provincia else col_zona
-            
-            if col_rep and col_grupo_prov:
-                st.markdown("""
-                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                            🎖️ RESUMEN DE EVENTOS Y DELEGACIONES POR PROVINCIA
-                        </h3>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                def extraer_delegaciones(texto):
-                    if pd.isna(texto): return 0
-                    texto_str = str(texto).lower()
-                    match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
-                    if match:
-                        return int(match.group(1))
-                    elif "delegacion" in texto_str or "banda" in texto_str:
-                        return 1
-                    return 0
-                    
-                df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
-                resumen_prov = df_geo.groupby(col_grupo_prov).agg(
-                    Total_Eventos=(col_grupo_prov, 'count'),
-                    Total_Delegaciones=('Cant_Delegaciones', 'sum')
-                ).reset_index()
-                resumen_prov.columns = ['Provincia', 'Total_Eventos', 'Total_Delegaciones']
-                
-                if not resumen_prov.empty:
-                    cols_del = st.columns(6) 
-                    for idx, row in resumen_prov.iterrows():
-                        col_idx = idx % 6
-                        with cols_del[col_idx]:
-                            st.markdown(f"""
-                            <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 0 5px rgba(0,255,100,0.15);">
-                                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(0,255,100,0.3); padding-bottom: 6px; margin-bottom: 8px; min-height: 28px; display: flex; align-items: center; justify-content: center;">
-                                    {row['Provincia']}
-                                </div>
-                                <div style="font-size: 10px; color: #e2e8f0; line-height: 1.8;">
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <span style="color: #00ffff; font-weight: bold;">TOTAL EVENTOS:</span> 
-                                        <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Eventos'])}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <span style="color: #00ff66; font-weight: bold;">TOTAL DELEGACIONES:</span> 
-                                        <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Delegaciones'])}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                else:
-                    st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
+                        folium.Marker(
+                            location=[row['Lat_clean'], row['Lon_clean']],
+                            icon=icono_patrio, 
+                            popup=folium.Popup(popup_content, max_width=320, show=False)
+                        ).add_to(grupo_marcadores)
 
-                # --- MOTOR DE LECTURA PRECISO (SIN FALSOS POSITIVOS Y CON MÉDICAS RESTAURADAS) ---
+                st_folium(m, height=750, use_container_width=True, returned_objects=[])
+                
+                # --- MOTOR DE LECTURA ROBUSTO ---
                 categorias_lista = [
                     "Aprehendidos (Alteración/Riña/Agresión)",
                     "Aprehendidos (Indocumentados)",
@@ -672,15 +600,110 @@ try:
                                 data=csv,
                                 file_name='Desglose_Provincial.csv',
                                 mime='text/csv',
+                                key="btn_download_operativo"
                             )
                     else:
                         st.info("No se detectaron acciones policiales o administrativas para desglosar en este rango de fechas.")
                 else:
                     st.info("No hay datos geográficos para agrupar por provincia en este rango.")
-                    
-        else:
-            st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
-            
+            else:
+                st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
+
+        # ==========================================
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (ESTÁTICA TÉCNICA)
+        # ==========================================
+        with pestania_presentacion:
+            st.markdown(f"""
+                <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
+                    <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
+                        📊 RESUMEN TÉCNICO REGIONAL | PERÍODO: {fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')}
+                    </h2>
+                    <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
+                        Informe ejecutivo con desglose de eventos, delegaciones y acciones operativas clave por provincia.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+
+            if col_rep and col_grupo_prov and not df_base_fecha.empty:
+                # Procesar datos para la presentación basados en el rango temporal seleccionado en la barra lateral
+                df_pres = df_base_fecha.copy()
+                
+                # Extraer delegaciones
+                def extraer_delegaciones_pres(texto):
+                    if pd.isna(texto): return 0
+                    texto_str = str(texto).lower()
+                    match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+                    if match:
+                        return int(match.group(1))
+                    elif "delegacion" in texto_str or "banda" in texto_str:
+                        return 1
+                    return 0
+
+                df_pres['Cant_Del'] = df_pres[col_rep].apply(extraer_delegaciones_pres)
+                
+                # Aplicar el analizador analítico por provincia
+                df_pres_kpi = df_pres[col_rep].apply(analizar_fila)
+                df_pres_full = pd.concat([df_pres, df_pres_kpi], axis=1)
+                
+                # Agrupar por Provincia
+                agrupado_prov = df_pres_full.groupby(col_grupo_prov).agg(
+                    Total_Eventos=(col_grupo_prov, 'count'),
+                    Total_Delegaciones=('Cant_Del', 'sum'),
+                    Capturas=('Aprehendidos (Alteración/Riña/Agresión)', 'sum'),
+                    Indocumentados=('Aprehendidos (Indocumentados)', 'sum'),
+                    Libar=('Aprehendidos (Libar Licor)', 'sum'),
+                    Oficio=('Aprehendidos (Por Oficio)', 'sum'),
+                    Otras_Capturas=('Otras Capturas y Conducciones', 'sum'),
+                    Evacuaciones=('Atenciones Médicas y Evacuaciones', 'sum'),
+                    Decomisos=('Decomiso de Armas o Drogas', 'sum'),
+                    Licor=('Retención de Licor', 'sum'),
+                    Articulos=('Artículos Varios Decomisados / Recuperados', 'sum'),
+                    Alteraciones=('Desalojos y Desórdenes (Multitudes)', 'sum'),
+                    Faltas=('Multas, Sanciones y Citaciones', 'sum')
+                ).reset_index()
+
+                # Mostrar las tarjetas técnicas estilo diapositiva por provincia
+                cols_tarjetas = st.columns(3)
+                for index, row in agrupado_prov.iterrows():
+                    col_idx = index % 3
+                    provincia_nombre = row[col_grupo_prov]
+                    t_ev = int(row['Total_Eventos'])
+                    t_del = int(row['Total_Delegaciones'])
+                    t_cap = int(row['Capturas'] + row['Indocumentados'] + row['Libar'] + row['Oficio'] + row['Otras_Capturas'])
+                    t_med = int(row['Evacuaciones'])
+                    t_dec = int(row['Decomisos'] + row['Licor'] + row['Articulos'])
+                    t_alt = int(row['Alteraciones'])
+                    t_fal = int(row['Faltas'])
+
+                    with cols_tarjetas[col_idx]:
+                        st.markdown(f"""
+                        <div style="background: rgba(11, 15, 25, 0.75); border: 2px solid rgba(0, 255, 255, 0.5); border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,255,255,0.15);">
+                            <div style="background: #1b365d; color: #ffffff; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 15px; margin-bottom: 12px; text-align: center; border-bottom: 2px solid #00ffff;">
+                                🛡️ PROVINCIA: {provincia_nombre.upper()}
+                            </div>
+                            <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 4px;">
+                                    <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
+                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 4px 0;">
+                                    <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
+                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                </div>
+                                <div style="margin-top: 8px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase;">Acciones Clave:</div>
+                                <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px;">
+                                    <li>Capturas / Aprehensiones: <b style="color:#ff3333;">{t_cap}</b></li>
+                                    <li>Evacuaciones / Médicas: <b style="color:#00ff66;">{t_med}</b></li>
+                                    <li>Decomisos / Recuperaciones: <b style="color:#ffae00;">{t_dec}</b></li>
+                                    <li>Alteración del Orden: <b style="color:#bd00ff;">{t_alt}</b></li>
+                                    <li>Faltas Adm. / MINSA: <b style="color:#00c8ff;">{t_fal}</b></li>
+                                </ul>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar el resumen técnico de presentación.")
+
     else:
         st.warning("⚠️ No hay incidentes cargados en la base de datos de Google Sheets.")
         
