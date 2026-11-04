@@ -182,7 +182,6 @@ try:
             
         st.markdown("---")
         
-        # NUEVO: Filtro Rango Temporal
         st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
         fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 1, 1))
         fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
@@ -205,7 +204,6 @@ try:
     
     # 2. Filtro de Horas
     if col_hora and 'Hora_int' in df_geo.columns:
-        # Mantenemos los -1 (horas que no se pudieron detectar por estar vacías) para no perder datos vitales por error humano en Excel
         df_geo = df_geo[((df_geo['Hora_int'] >= hora_inicial) & (df_geo['Hora_int'] <= hora_final)) | (df_geo['Hora_int'] == -1)]
             
     # 3. Filtro de Centro
@@ -348,11 +346,11 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
-        # --- TABLERO TÁCTICO DE ZONAS (NUEVO) ---
+        # --- TABLERO TÁCTICO DE ZONAS (CONFIGURACIÓN TRANSPARENTE Y PEQUEÑA) ---
         if col_zona:
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 15px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
                         📊 RESUMEN OPERATIVO POR ZONA POLICIAL
                     </h3>
                 </div>
@@ -361,15 +359,19 @@ try:
             resumen_zonas = df_geo[col_zona].value_counts().reset_index()
             resumen_zonas.columns = ['Zona Policial', 'Cantidad']
             
-            # Crear columnas dinámicas (hasta 4 por fila)
-            cols = st.columns(4)
+            # 6 columnas para hacer los cuadros mucho más pequeños
+            cols = st.columns(6) 
             for idx, row in resumen_zonas.iterrows():
-                col_idx = idx % 4
+                col_idx = idx % 6
                 with cols[col_idx]:
                     st.markdown(f"""
-                    <div style="background: rgba(11, 15, 25, 0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: center; box-shadow: 0 0 15px rgba(0,255,255,0.2);">
-                        <h4 style="margin: 0; color: #e2e8f0; font-size: 14px;">{row['Zona Policial']}</h4>
-                        <h2 style="margin: 8px 0 0 0; color: #ff0055; font-size: 32px; text-shadow: 0 0 15px rgba(255,0,85,0.6);">{row['Cantidad']}</h2>
+                    <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
+                        <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                            {row['Zona Policial']}
+                        </div>
+                        <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
+                            {row['Cantidad']}
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
         
