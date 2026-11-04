@@ -217,6 +217,26 @@ try:
         if col_centro and centro_seleccionado != "TODOS":
             df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
 
+        # --- PREPARACIÓN DEL MAPA ---
+        if col_lat and col_lon:
+            df_mapa['Lat_clean'] = pd.to_numeric(
+                df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_mapa['Lon_clean'] = pd.to_numeric(
+                df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
+            df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
+        else:
+            df_geo = pd.DataFrame()
+
+        # --- CONTADOR DE INCIDENTES / EVENTOS EN LA BARRA LATERAL ---
+        with st.sidebar:
+            st.markdown("---")
+            st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
+
         # --- MÉTRICAS SUPERIORES DE LLAMADAS (SLA) ---
         if len(cols_ll_rec) > 0:
             st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
@@ -275,21 +295,6 @@ try:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-        # --- PREPARACIÓN DEL MAPA ---
-        if col_lat and col_lon:
-            df_mapa['Lat_clean'] = pd.to_numeric(
-                df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-                errors='coerce'
-            )
-            df_mapa['Lon_clean'] = pd.to_numeric(
-                df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-                errors='coerce'
-            )
-            df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
-            df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
-        else:
-            df_geo = pd.DataFrame()
 
         modo_mapa = st.radio(
             "Capa de Visualización Táctica:",
@@ -498,7 +503,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- NUEVO: MOTOR DE LECTURA SIN LÍMITES ESTRICTOS (\b AL FINAL) ---
+                # --- MOTOR DE LECTURA PRECISO Y ESTRICTO (BLINDADO CONTRA FALSOS POSITIVOS) ---
                 categorias_lista = [
                     "Aprehendidos (Alteración/Riña/Agresión)",
                     "Aprehendidos (Indocumentados)",
@@ -520,11 +525,9 @@ try:
                     if pd.isna(texto): return pd.Series(res)
                     texto_str = str(texto).lower()
                     
-                    # Eliminar edades y horas para no sumar "9 años" o "20 hrs"
                     texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
                     texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
                     
-                    # Traducir letras a números
                     texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
                     texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
                     texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
@@ -541,41 +544,40 @@ try:
                         if cant == 0:
                             continue 
                         
-                        # MATCH POR RAÍZ (SIN \b al final) PARA CAPTURAR PLURALES (ej. aprehendido, multas)
-                        if re.search(r'\b(?:indocumentad|documento)', frase):
+                        # FILTRADO ESTRICTO EXCLUSIVO CON NÚMEROS EXPLÍCITOS
+                        if re.search(r'\b(?:indocumentad|documento)\b', frase):
                             res["Aprehendidos (Indocumentados)"] += cant
-                        elif re.search(r'\b(?:libar|livar)', frase):
+                        elif re.search(r'\b(?:libar|livar)\b', frase):
                             res["Aprehendidos (Libar Licor)"] += cant
-                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)', frase):
+                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)\b', frase):
                             res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
-                        elif re.search(r'\b(?:oficio)', frase):
+                        elif re.search(r'\b(?:oficio)\b', frase):
                             res["Aprehendidos (Por Oficio)"] += cant
-                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
+                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)\b', frase):
                             res["Otras Capturas y Conducciones"] += cant
-                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)', frase):
+                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)\b', frase):
                             res["Atenciones Médicas y Evacuaciones"] += cant
-                        elif re.search(r'\b(?:carnet)', frase):
+                        elif re.search(r'\b(?:carnet)\b', frase):
                             res["Retención de Carnets (Salud)"] += cant
-                        elif re.search(r'\b(?:multa|sancion|citaci|citad|establecimiento|cierre)', frase):
+                        elif re.search(r'\b(?:multa|sancion|citaci|citad|establecimiento|cierre)\b', frase):
                             res["Multas, Sanciones y Citaciones"] += cant
-                        elif re.search(r'\b(?:destrucci|destruid|insalubre)', frase): # Removido "alimento" para evitar conflicto con citaciones
+                        elif re.search(r'\b(?:destrucci|destruid|insalubre)\b', frase):
                             res["Destrucción de Alimentos (MINSA)"] += cant
-                        elif re.search(r'\b(?:licor|bebida|cerveza)', frase):
+                        elif re.search(r'\b(?:licor|bebida|cerveza)\b', frase):
                             res["Retención de Licor"] += cant
-                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)', frase):
+                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)\b', frase):
                             res["Decomiso de Armas o Drogas"] += cant
-                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)', frase):
+                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)\b', frase):
                             res["Artículos Varios Decomisados / Recuperados"] += cant
-                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)', frase):
+                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)\b', frase):
                             res["Desalojos y Desórdenes (Multitudes)"] += cant
                             
                     return pd.Series(res)
 
-                # Procesamiento unificado fila por fila
                 df_kpi = df_geo[col_rep].apply(analizar_fila)
                 df_geo_procesado = pd.concat([df_geo, df_kpi], axis=1)
 
-                # --- KPIS SUPERIORES DE ACCIONES (SINCRONIZADOS MATEMÁTICAMENTE) ---
+                # --- KPIS SUPERIORES DE ACCIONES (SINCRONIZADOS Y LIMPIOS DE FALSOS POSITIVOS) ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -639,7 +641,6 @@ try:
                 resumen_acciones = df_geo_procesado.groupby(col_grupo_prov)[categorias_lista].sum()
                 
                 if not resumen_acciones.empty:
-                    # Limpiar provincias y categorías vacías
                     resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
                     resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
                     
@@ -649,7 +650,6 @@ try:
                     if not resumen_acciones_t.empty:
                         resumen_acciones_t = resumen_acciones_t.sort_values(by='Total General', ascending=False)
                         
-                        # Fila de TOTAL GENERAL en el FONDO de la tabla
                         totales_columnas = resumen_acciones_t.sum(axis=0)
                         totales_columnas.name = 'TOTAL GENERAL'
                         resumen_acciones_t = pd.concat([resumen_acciones_t, pd.DataFrame(totales_columnas).T])
