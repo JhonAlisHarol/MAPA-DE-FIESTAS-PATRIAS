@@ -125,15 +125,6 @@ def cargar_datos_bitacora():
     df = df.reset_index(drop=True)
     return df
 
-def extraer_hora(hora_str):
-    try:
-        hora_str = str(hora_str).strip()
-        if ':' in hora_str:
-            return int(hora_str.split(':')[0])
-        return int(float(hora_str))
-    except:
-        return -1
-
 def limpiar_numeros_llamadas(val):
     if pd.isna(val) or str(val).strip() == "":
         return 0
@@ -163,15 +154,12 @@ try:
     col_i_crea = next((c for c in df.columns if "CREADO" in c), None)
 
     # ---------------------------------------------------------------------
-    # SOLUCIÓN DE FECHAS: Imposición de formato Latinoamericano exacto
+    # FECHAS: Extracción estricta y blindada
     # ---------------------------------------------------------------------
     if col_dia:
-        fecha_extraida = df[col_dia].astype(str).str.extract(r'(\d{1,2}/\d{1,2}/\d{4})')[0]
-        df['Fecha_dt'] = pd.to_datetime(fecha_extraida, format="%d/%m/%Y", errors='coerce')
-        df['Fecha_dt'] = df['Fecha_dt'].fillna(pd.to_datetime(df[col_dia], dayfirst=True, errors='coerce'))
-        
-    if col_hora:
-        df['Hora_int'] = df[col_hora].apply(extraer_hora)
+        # Extrae solo la parte de la fecha antes de cualquier espacio (por si viene con horas)
+        fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
+        df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
 
     # --- PANEL LATERAL Y FILTROS ---
     with st.sidebar:
@@ -184,12 +172,9 @@ try:
         st.markdown("---")
         
         st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
-        # Por defecto muestra desde el inicio de noviembre para no confundir la vista
+        # Filtro único de fechas (sin horas)
         fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
         fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
-        
-        hora_inicial = st.selectbox("Hora Inicial:", options=list(range(24)), index=0)
-        hora_final = st.selectbox("Hora Final:", options=list(range(24)), index=23)
         
         st.markdown("---")
         
@@ -200,28 +185,29 @@ try:
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
     # ---------------------------------------------------------------------
-    # APLICACIÓN DE FILTROS A TODA LA BASE DE DATOS (INCLUYENDO LLAMADAS)
+    # LÓGICA DE FILTRADO (SOLO FECHAS PARA LLAMADAS, FECHAS+CENTRO PARA MAPA)
     # ---------------------------------------------------------------------
-    df_filtrado = df.copy()
     
-    if col_dia and 'Fecha_dt' in df_filtrado.columns:
-        inicio_ts = pd.Timestamp(fecha_inicio)
-        fin_ts = pd.Timestamp(fecha_fin) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1) # Cubre hasta las 23:59 del último día
-        df_filtrado = df_filtrado[(df_filtrado['Fecha_dt'] >= inicio_ts) & (df_filtrado['Fecha_dt'] <= fin_ts)]
+    # 1. Filtro General por Fecha
+    df_base_fecha = df.copy()
+    if col_dia and 'Fecha_dt' in df_base_fecha.columns:
+        df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
     
-    if col_hora and 'Hora_int' in df_filtrado.columns:
-        # Si la fila no tiene hora (-1), la pasamos por defecto para no borrar llamadas globales diarias
-        df_filtrado = df_filtrado[((df_filtrado['Hora_int'] >= hora_inicial) & (df_filtrado['Hora_int'] <= hora_final)) | (df_filtrado['Hora_int'] == -1)]
-            
-    if col_centro and centro_seleccionado != "TODOS":
-        df_filtrado = df_filtrado[df_filtrado[col_centro].astype(str) == centro_seleccionado]
+    # 2. Base de Datos EXCLUSIVA para las Llamadas (Solo obedece a las Fechas, NO al Centro)
+    df_llamadas = df_base_fecha.copy()
 
-    # --- MÉTRICAS SUPERIORES DE LLAMADAS (DINÁMICAS SEGÚN LA FECHA FILTRADA) ---
+    # 3. Base de Datos EXCLUSIVA para el Mapa (Obedece a Fecha y Centro)
+    df_mapa = df_base_fecha.copy()
+    if col_centro and centro_seleccionado != "TODOS":
+        df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
+
+
+    # --- MÉTRICAS SUPERIORES DE LLAMADAS ---
     if col_ll_rec:
-        t_rec = sum(df_filtrado[col_ll_rec].apply(limpiar_numeros_llamadas))
-        t_cont = sum(df_filtrado[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
-        t_aban = sum(df_filtrado[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
-        t_crea = sum(df_filtrado[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
+        t_rec = sum(df_llamadas[col_ll_rec].apply(limpiar_numeros_llamadas))
+        t_cont = sum(df_llamadas[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
+        t_aban = sum(df_llamadas[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
+        t_crea = sum(df_llamadas[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
         
         pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
         
@@ -251,18 +237,18 @@ try:
         """, unsafe_allow_html=True)
 
     # ---------------------------------------------------------------------
-    # PREPARACIÓN DEL MAPA (USANDO SOLO FILAS CON COORDENADAS)
+    # PREPARACIÓN DEL MAPA (USANDO df_mapa CON COORDENADAS LIMPIAS)
     # ---------------------------------------------------------------------
     if col_lat and col_lon:
-        df_filtrado['Lat_clean'] = pd.to_numeric(
-            df_filtrado[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+        df_mapa['Lat_clean'] = pd.to_numeric(
+            df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
             errors='coerce'
         )
-        df_filtrado['Lon_clean'] = pd.to_numeric(
-            df_filtrado[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+        df_mapa['Lon_clean'] = pd.to_numeric(
+            df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
             errors='coerce'
         )
-        df_geo = df_filtrado.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
+        df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
         df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
     else:
         df_geo = pd.DataFrame()
@@ -305,7 +291,6 @@ try:
             
             rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
 
-            # ESCÁNER UNIVERSAL DE IMÁGENES
             url_img = ""
             for val in row.values:
                 val_str = str(val).strip()
