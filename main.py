@@ -178,7 +178,7 @@ try:
     col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
     col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
-    # FECHAS: Extracción estricta y blindada
+    # FECHAS
     if col_dia:
         fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
         df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
@@ -211,7 +211,6 @@ try:
         df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
     
     df_llamadas = df_base_fecha.copy()
-
     df_mapa = df_base_fecha.copy()
     if col_centro and centro_seleccionado != "TODOS":
         df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
@@ -496,11 +495,11 @@ try:
             else:
                 st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE DETALLADO ---
+            # --- MOTOR DE LECTURA POLICIAL PARA ACCIONES RELEVANTES ---
             st.markdown("""
-                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        📋 DESGLOSE DETALLADO DE ACCIONES POLICIALES Y ADM.
+                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
@@ -508,6 +507,7 @@ try:
             def extraer_cantidad_accion(texto, palabras_clave):
                 if pd.isna(texto): return 0
                 texto_str = str(texto).lower()
+                
                 texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
                 texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
                 texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
@@ -518,8 +518,12 @@ try:
                 
                 total = 0
                 frases = re.split(r'[.;,\n]|\by\b', texto_str)
+                
+                # REPARACIÓN DE FALSOS POSITIVOS CON LÍMITE DE PALABRA ESTRICTO (\b)
+                patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
+                
                 for frase in frases:
-                    if any(kw in frase for kw in palabras_clave):
+                    if re.search(patron_kws, frase):
                         numeros = re.findall(r'\b(\d+)\b', frase)
                         if numeros:
                             total += sum(int(n) for n in numeros)
@@ -527,7 +531,61 @@ try:
                             total += 1 
                 return total
 
-            # Categorías para el cuadro detallado
+            # Aplicar el motor a los bloques superiores
+            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['captura', 'aprehensi', 'deteni', 'conducci'])).sum()
+            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'])).sum()
+            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'retenid', 'licor', 'destrucci', 'carnet'])).sum()
+            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí', 'desalojo'])).sum()
+            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento'])).sum()
+            
+            c1, c2, c3, c4, c5 = st.columns(5)
+            
+            with c1:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
+                    <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
+                    <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c3:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
+                    <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c4:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
+                    <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c5:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
+                    <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE DETALLADO ---
+            st.markdown("""
+                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        📋 DESGLOSE DETALLADO DE ACCIONES POLICIALES Y ADM.
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Categorías para el cuadro detallado (El motor se encarga de usar los límites de palabra \b)
             categorias_desglose = {
                 "Capturas y Aprehensiones": ['captura', 'aprehensi', 'deteni', 'conducci'],
                 "Atenciones Médicas y Evacuaciones": ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'],
@@ -544,7 +602,7 @@ try:
             datos_tabla = []
             for nombre_cat, palabras in categorias_desglose.items():
                 total_cat = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras)).sum()
-                if total_cat > 0:
+                if total_cat > 0:  # Si está en cero, se oculta automáticamente
                     datos_tabla.append({"Acción / Incidente": nombre_cat, "Total Registrado": int(total_cat)})
 
             if datos_tabla:
