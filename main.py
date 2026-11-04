@@ -184,6 +184,9 @@ try:
     col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
     col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
+    # ---------------------------------------------------------------------
+    # FECHAS: Extracción estricta y blindada
+    # ---------------------------------------------------------------------
     if col_dia:
         fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
         df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
@@ -529,27 +532,30 @@ try:
                 texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
                 texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
                 texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
+                # Ampliamos a más números por si escriben en letras
+                texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
                 
                 total = 0
-                # Analizar oración por oración para no mezclar números
-                frases = re.split(r'[.;\n]', texto_str)
+                # Separar por punto, coma, punto y coma, saltos de línea y la conjunción "y"
+                frases = re.split(r'[.;,\n]|\by\b', texto_str)
                 for frase in frases:
                     if any(kw in frase for kw in palabras_clave):
-                        # Extrae todos los números que encuentre pegados a la acción en esa oración
+                        # Extrae todos los números pegados a la acción en esa oración específica
                         numeros = re.findall(r'\b(\d+)\b', frase)
                         if numeros:
                             total += sum(int(n) for n in numeros)
                         else:
-                            total += 1 # Si no hay número pero está la palabra, asume que es 1 evento
+                            total += 1 
                 return total
 
-            # Aplicar el motor a cada categoría
+            # Aplicar el motor a cada categoría (Incluyendo las nuevas palabras del reporte)
             tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['captura', 'aprehensi', 'deteni', 'conducci'])).sum()
-            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic'])).sum()
-            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'licor'])).sum()
-            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí'])).sum()
+            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'])).sum()
+            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'retenid', 'licor', 'destrucci', 'carnet'])).sum()
+            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí', 'desalojo'])).sum()
+            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento'])).sum()
             
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3, c4, c5 = st.columns(5)
             
             with c1:
                 st.markdown(f"""
@@ -577,6 +583,13 @@ try:
                 <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
                     <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
                     <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c5:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
+                    <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
