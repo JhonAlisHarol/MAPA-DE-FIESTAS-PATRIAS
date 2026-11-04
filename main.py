@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS VISUALES Y FONDO TÁCTICO DE LA BANDERA ---
+# --- ESTILOS VISUALES Y FONDO TÁCTICO ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -110,35 +110,39 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- CONEXIÓN OPTIMIZADA A GOOGLE SHEETS ---
+# --- CONEXIÓN A GOOGLE SHEETS (BLINDADA) ---
 @st.cache_data(ttl=45)
 def cargar_datos_bitacora():
     url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
-    df_raw = pd.read_csv(url_csv, header=None)
-    
-    fila_encabezado = 0
-    for i, row in df_raw.head(10).iterrows():
-        fila_texto = " ".join([str(val).upper().strip() for val in row.values])
-        if "ZONA" in fila_texto and ("HORA" in fila_texto or "DÍA" in fila_texto or "DIA" in fila_texto):
-            fila_encabezado = i
-            break
-    
-    df = df_raw.iloc[fila_encabezado+1:].copy()
-    
-    columnas_crudas = df_raw.iloc[fila_encabezado].astype(str).str.strip().str.upper().tolist()
-    nuevas_cols = []
-    vistos = {}
-    for c in columnas_crudas:
-        if c in vistos:
-            vistos[c] += 1
-            nuevas_cols.append(f"{c}_{vistos[c]}")
-        else:
-            vistos[c] = 0
-            nuevas_cols.append(c)
-            
-    df.columns = nuevas_cols
-    df = df.reset_index(drop=True)
-    return df
+    try:
+        df_raw = pd.read_csv(url_csv, header=None)
+        
+        fila_encabezado = 0
+        for i, row in df_raw.head(10).iterrows():
+            fila_texto = " ".join([str(val).upper().strip() for val in row.values])
+            if "ZONA" in fila_texto and ("HORA" in fila_texto or "DÍA" in fila_texto or "DIA" in fila_texto):
+                fila_encabezado = i
+                break
+        
+        df = df_raw.iloc[fila_encabezado+1:].copy()
+        
+        columnas_crudas = df_raw.iloc[fila_encabezado].astype(str).str.strip().str.upper().tolist()
+        nuevas_cols = []
+        vistos = {}
+        for c in columnas_crudas:
+            if c in vistos:
+                vistos[c] += 1
+                nuevas_cols.append(f"{c}_{vistos[c]}")
+            else:
+                vistos[c] = 0
+                nuevas_cols.append(c)
+                
+        df.columns = nuevas_cols
+        df = df.reset_index(drop=True)
+        return df
+    except Exception as e:
+        st.error(f"Error crítico conectando a la base de datos: {e}")
+        return pd.DataFrame()
 
 def limpiar_numeros_llamadas(val):
     if pd.isna(val) or str(val).strip() == "":
@@ -149,9 +153,9 @@ def limpiar_numeros_llamadas(val):
     except:
         return 0
 
-try:
-    df = cargar_datos_bitacora()
+df = cargar_datos_bitacora()
 
+if not df.empty:
     # Identificación blindada de columnas
     col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
     col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
@@ -205,7 +209,7 @@ try:
             lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # --- LÓGICA DE FILTRADO ---
+    # --- LÓGICA DE FILTRADO SEGURO ---
     df_base_fecha = df.copy()
     if col_dia and 'Fecha_dt' in df_base_fecha.columns:
         df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
@@ -427,20 +431,21 @@ try:
             """, unsafe_allow_html=True)
             resumen_centros = df_geo[col_centro].value_counts().reset_index()
             resumen_centros.columns = ['Centro', 'Cantidad']
-            cols_c = st.columns(6) 
-            for idx, row in resumen_centros.iterrows():
-                col_idx = idx % 6
-                with cols_c[col_idx]:
-                    st.markdown(f"""
-                    <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
-                        <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                            {row['Centro']}
+            if not resumen_centros.empty:
+                cols_c = st.columns(6) 
+                for idx, row in resumen_centros.iterrows():
+                    col_idx = idx % 6
+                    with cols_c[col_idx]:
+                        st.markdown(f"""
+                        <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
+                            <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                                {row['Centro']}
+                            </div>
+                            <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
+                                {row['Cantidad']}
+                            </div>
                         </div>
-                        <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
-                            {row['Cantidad']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
 
         col_grupo_prov = col_provincia if col_provincia else col_zona
         
@@ -495,7 +500,7 @@ try:
             else:
                 st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-            # --- DICCIONARIO MAESTRO (USADO POR KPIS Y TABLA) ---
+            # --- DICCIONARIO MAESTRO (BLINDADO) ---
             dict_kws = {
                 "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid'],
                 "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
@@ -589,7 +594,7 @@ try:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
+            # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (BLINDADO) ---
             st.markdown("""
                 <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -603,35 +608,38 @@ try:
                 df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
             
             resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
-            resumen_acciones_t = resumen_acciones.T
-            resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
             
-            # Filtra las filas que estén en cero para mantener el reporte limpio
-            resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
-            
-            resumen_acciones_t = resumen_acciones_t.reset_index()
-            resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
-            
-            if not resumen_acciones_t.empty:
-                df_desglose = resumen_acciones_t
+            if not resumen_acciones.empty:
+                resumen_acciones_t = resumen_acciones.T
+                resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
                 
-                for col in df_desglose.columns:
-                    if col != 'Acción / Incidente':
-                        df_desglose[col] = df_desglose[col].astype(int)
+                resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
                 
-                col_izq, col_der = st.columns([4, 1])
-                with col_izq:
-                    st.dataframe(df_desglose, use_container_width=True, hide_index=True)
-                with col_der:
-                    csv = df_desglose.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Descargar Cuadro",
-                        data=csv,
-                        file_name='Desglose_Provincial.csv',
-                        mime='text/csv',
-                    )
+                if not resumen_acciones_t.empty:
+                    resumen_acciones_t = resumen_acciones_t.reset_index()
+                    resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
+                    
+                    df_desglose = resumen_acciones_t
+                    
+                    for col in df_desglose.columns:
+                        if col != 'Acción / Incidente':
+                            df_desglose[col] = df_desglose[col].astype(int)
+                    
+                    col_izq, col_der = st.columns([4, 1])
+                    with col_izq:
+                        st.dataframe(df_desglose, use_container_width=True, hide_index=True)
+                    with col_der:
+                        csv = df_desglose.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            label="📥 Descargar Cuadro",
+                            data=csv,
+                            file_name='Desglose_Provincial.csv',
+                            mime='text/csv',
+                        )
+                else:
+                    st.info("No se detectaron acciones policiales o administrativas para desglosar en este rango de fechas.")
             else:
-                st.info("No se detectaron acciones policiales o administrativas en los reportes actuales.")
+                st.info("No hay datos geográficos para agrupar por provincia en este rango.")
                 
     else:
         st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
