@@ -23,7 +23,6 @@ st.markdown("""
     div[data-testid="stToolbar"] {display: none !important;}
     button[kind="header"] {display: none !important;}
     
-    /* Fondo con la Bandera de Panamá más clara y viva (Opacidad reducida al 50%) */
     .bg-overlay {
         position: fixed;
         top: 0;
@@ -38,14 +37,12 @@ st.markdown("""
         pointer-events: none;
     }
 
-    /* Sombras en el texto general para asegurar que se lea bien sobre el fondo más claro */
     .stApp, .block-container, [data-testid="stVerticalBlock"] {
         background: transparent !important;
         color: #ffffff;
         text-shadow: 0px 1px 3px rgba(0,0,0,0.8);
     }
     
-    /* Panel Lateral Transparente (Cristal Ahumado) para ver la bandera */
     [data-testid="stSidebar"] {
         background-color: rgba(10, 10, 15, 0.35) !important;
         border-right: 3px solid transparent;
@@ -61,7 +58,6 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* Contenedor Transparente con Borde Neón Patriótico */
     .neon-title-container {
         border: 4px solid transparent;
         background: linear-gradient(transparent, transparent), 
@@ -77,7 +73,6 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* Título con bloques de color definidos: Azul, Blanco y Rojo */
     .neon-title-text {
         font-size: 28px;
         font-weight: 900;
@@ -97,7 +92,6 @@ st.markdown("""
         text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.9);
     }
     
-    /* Estilos del selector SLA */
     div.row-widget.stRadio > div {
         display: flex;
         flex-direction: row;
@@ -184,9 +178,7 @@ try:
     col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
     col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
-    # ---------------------------------------------------------------------
     # FECHAS: Extracción estricta y blindada
-    # ---------------------------------------------------------------------
     if col_dia:
         fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
         df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
@@ -213,9 +205,7 @@ try:
             lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # ---------------------------------------------------------------------
-    # LÓGICA DE FILTRADO
-    # ---------------------------------------------------------------------
+    # --- LÓGICA DE FILTRADO ---
     df_base_fecha = df.copy()
     if col_dia and 'Fecha_dt' in df_base_fecha.columns:
         df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
@@ -285,9 +275,7 @@ try:
         </div>
         """, unsafe_allow_html=True)
 
-    # ---------------------------------------------------------------------
-    # PREPARACIÓN DEL MAPA
-    # ---------------------------------------------------------------------
+    # --- PREPARACIÓN DEL MAPA ---
     if col_lat and col_lon:
         df_mapa['Lat_clean'] = pd.to_numeric(
             df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
@@ -301,10 +289,6 @@ try:
         df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
     else:
         df_geo = pd.DataFrame()
-
-    with st.sidebar:
-        st.markdown("---")
-        st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
 
     modo_mapa = st.radio(
         "Capa de Visualización Táctica:",
@@ -512,11 +496,11 @@ try:
             else:
                 st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-            # --- MOTOR DE LECTURA POLICIAL PARA ACCIONES RELEVANTES ---
+            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE DETALLADO ---
             st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
+                        📋 DESGLOSE DETALLADO DE ACCIONES POLICIALES Y ADM.
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
@@ -524,23 +508,18 @@ try:
             def extraer_cantidad_accion(texto, palabras_clave):
                 if pd.isna(texto): return 0
                 texto_str = str(texto).lower()
-                
-                # Traductor de escritura policial a números reales
                 texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
                 texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
                 texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
                 texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
                 texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
                 texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
-                # Ampliamos a más números por si escriben en letras
                 texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
                 
                 total = 0
-                # Separar por punto, coma, punto y coma, saltos de línea y la conjunción "y"
                 frases = re.split(r'[.;,\n]|\by\b', texto_str)
                 for frase in frases:
                     if any(kw in frase for kw in palabras_clave):
-                        # Extrae todos los números pegados a la acción en esa oración específica
                         numeros = re.findall(r'\b(\d+)\b', frase)
                         if numeros:
                             total += sum(int(n) for n in numeros)
@@ -548,50 +527,44 @@ try:
                             total += 1 
                 return total
 
-            # Aplicar el motor a cada categoría (Incluyendo las nuevas palabras del reporte)
-            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['captura', 'aprehensi', 'deteni', 'conducci'])).sum()
-            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'])).sum()
-            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'retenid', 'licor', 'destrucci', 'carnet'])).sum()
-            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí', 'desalojo'])).sum()
-            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento'])).sum()
-            
-            c1, c2, c3, c4, c5 = st.columns(5)
-            
-            with c1:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
-                    <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
-                    <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c3:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
-                    <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c4:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
-                    <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c5:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
-                    <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # Categorías para el cuadro detallado
+            categorias_desglose = {
+                "Capturas y Aprehensiones": ['captura', 'aprehensi', 'deteni', 'conducci'],
+                "Atenciones Médicas y Evacuaciones": ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'],
+                "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci'],
+                "Retención de Licor": ['licor'],
+                "Otras Recuperaciones y Decomisos": ['decomis', 'recuperaci'],
+                "Alteración del Orden y Riñas": ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí'],
+                "Desalojos y Control de Multitudes": ['desalojo'],
+                "Retención de Carnets (Salud)": ['carnet'],
+                "Destrucción de Alimentos (MINSA)": ['destrucci'],
+                "Multas, Sanciones y Citaciones": ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento']
+            }
+
+            datos_tabla = []
+            for nombre_cat, palabras in categorias_desglose.items():
+                total_cat = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras)).sum()
+                if total_cat > 0:
+                    datos_tabla.append({"Acción / Incidente": nombre_cat, "Total Registrado": int(total_cat)})
+
+            if datos_tabla:
+                df_desglose = pd.DataFrame(datos_tabla)
+                
+                col_izq, col_der = st.columns([3, 1])
+                with col_izq:
+                    # Cuadro interactivo tipo Excel
+                    st.dataframe(df_desglose, use_container_width=True, hide_index=True)
+                with col_der:
+                    # Botón para descargar a Excel/CSV
+                    csv = df_desglose.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Descargar Cuadro en Excel/CSV",
+                        data=csv,
+                        file_name='Desglose_Acciones_Tacticas.csv',
+                        mime='text/csv',
+                    )
+            else:
+                st.info("No se detectaron acciones policiales o administrativas en los reportes actuales.")
                 
     else:
         st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
