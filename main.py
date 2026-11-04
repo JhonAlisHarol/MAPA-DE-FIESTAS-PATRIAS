@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA ESTILIZADO CON TARJETAS LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA TÉCNICO REGIONAL LIMPIO)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -667,7 +667,7 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO (BANDERA DE PANAMÁ ESTILIZADA) ---
+                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO ---
                 st.markdown("""
                 <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(11, 15, 25, 0.95), rgba(27, 54, 93, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 25px rgba(0,255,255,0.3);">
                 """, unsafe_allow_html=True)
@@ -684,7 +684,7 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Construir lista de acciones clave FILTRANDO ESTRICTAMENTE LOS CEROS
+                    # Construir elementos de acciones clave SOLO si son mayores a 0 (sin dejar fragmentos de HTML rotos)
                     acciones_html = ""
                     if c_cap > 0:
                         acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
@@ -697,7 +697,6 @@ try:
                     if c_fal > 0:
                         acciones_html += f"<li>Faltas Adm. / MINSA: <b style='color:#00c8ff;'>{c_fal}</b></li>"
                     
-                    # Si no hay acciones clave con valor > 0, ocultamos completamente la sección de acciones clave para no saturar
                     seccion_acciones = ""
                     if acciones_html:
                         seccion_acciones = f"""
