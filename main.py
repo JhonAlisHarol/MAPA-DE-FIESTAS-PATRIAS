@@ -232,7 +232,7 @@ try:
         else:
             df_geo = pd.DataFrame()
 
-        # Variable global de provincia para evitar errores de alcance
+        # Variable global de provincia
         col_grupo_prov = col_provincia if col_provincia else col_zona
 
         # Contador en barra lateral
@@ -526,7 +526,7 @@ try:
                 c1, c2, c3, c4, c5 = st.columns(5)
                 with c1:
                     st.markdown(f"""
-                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,51,51,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
                         <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{int(tot_capturas)}</div>
                     </div>
@@ -614,16 +614,16 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (TARJETAS TÉCNICAS ESTILO MAPA)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 RESUMEN TÉCNICO REGIONAL | PERÍODO: {fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')}
+                        📊 PRESENTACIÓN OPERATIVA | RESUMEN REGIONAL POR PROVINCIA ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Presentación ejecutiva estructurada con base en el filtrado temporal operativo del C5.
+                        Distribución técnica estática de eventos, delegaciones y las 5 acciones clave por provincia.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -645,56 +645,66 @@ try:
                 df_pres_kpi = df_pres[col_rep].apply(analizar_fila)
                 df_pres_full = pd.concat([df_pres, df_pres_kpi], axis=1)
                 
+                # Agrupamos por provincia y sumamos cada una de las 5 acciones clave exactas
                 agrupado_prov = df_pres_full.groupby(col_grupo_prov).agg(
                     Total_Eventos=(col_grupo_prov, 'count'),
                     Total_Delegaciones=('Cant_Del', 'sum'),
-                    Capturas=('Aprehendidos (Alteración/Riña/Agresión)', 'sum'),
-                    Indocumentados=('Aprehendidos (Indocumentados)', 'sum'),
-                    Libar=('Aprehendidos (Libar Licor)', 'sum'),
-                    Oficio=('Aprehendidos (Por Oficio)', 'sum'),
-                    Otras_Capturas=('Otras Capturas y Conducciones', 'sum'),
-                    Evacuaciones=('Atenciones Médicas y Evacuaciones', 'sum'),
-                    Decomisos=('Decomiso de Armas o Drogas', 'sum'),
-                    Licor=('Retención de Licor', 'sum'),
-                    Articulos=('Artículos Varios Decomisados / Recuperados', 'sum'),
-                    Alteraciones=('Desalojos y Desórdenes (Multitudes)', 'sum'),
-                    Faltas=('Multas, Sanciones y Citaciones', 'sum')
+                    Capturas_Totales=(
+                        'Aprehendidos (Alteración/Riña/Agresión)', 
+                        lambda x: x.sum() + df_pres_full.loc[x.index, 'Aprehendidos (Indocumentados)'].sum() + 
+                                  df_pres_full.loc[x.index, 'Aprehendidos (Libar Licor)'].sum() + 
+                                  df_pres_full.loc[x.index, 'Aprehendidos (Por Oficio)'].sum() + 
+                                  df_pres_full.loc[x.index, 'Otras Capturas y Conducciones'].sum()
+                    ),
+                    Evacuaciones_Totales=('Atenciones Médicas y Evacuaciones', 'sum'),
+                    Decomisos_Totales=(
+                        'Decomiso de Armas o Drogas',
+                        lambda x: x.sum() + df_pres_full.loc[x.index, 'Retención de Licor'].sum() + 
+                                  df_pres_full.loc[x.index, 'Artículos Varios Decomisados / Recuperados'].sum()
+                    ),
+                    Alteracion_Totales=('Desalojos y Desórdenes (Multitudes)', 'sum'),
+                    Faltas_Totales=(
+                        'Retención de Carnets (Salud)',
+                        lambda x: x.sum() + df_pres_full.loc[x.index, 'Destrucción de Alimentos (MINSA)'].sum() + 
+                                  df_pres_full.loc[x.index, 'Multas, Sanciones y Citaciones'].sum()
+                    )
                 ).reset_index()
 
+                # Mostrar en cuadrícula de 3 columnas (idéntico al diseño de tarjetas solicitado)
                 cols_tarjetas = st.columns(3)
                 for index, row in agrupado_prov.iterrows():
                     col_idx = index % 3
                     provincia_nombre = row[col_grupo_prov]
                     t_ev = int(row['Total_Eventos'])
                     t_del = int(row['Total_Delegaciones'])
-                    t_cap = int(row['Capturas'] + row['Indocumentados'] + row['Libar'] + row['Oficio'] + row['Otras_Capturas'])
-                    t_med = int(row['Evacuaciones'])
-                    t_dec = int(row['Decomisos'] + row['Licor'] + row['Articulos'])
-                    t_alt = int(row['Alteraciones'])
-                    t_fal = int(row['Faltas'])
+                    c_cap = int(row['Capturas_Totales'])
+                    c_med = int(row['Evacuaciones_Totales'])
+                    c_dec = int(row['Decomisos_Totales'])
+                    c_alt = int(row['Alteracion_Totales'])
+                    c_fal = int(row['Faltas_Totales'])
 
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.75); border: 2px solid rgba(0, 255, 255, 0.5); border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,255,255,0.15);">
-                            <div style="background: #1b365d; color: #ffffff; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 15px; margin-bottom: 12px; text-align: center; border-bottom: 2px solid #00ffff;">
+                        <div style="background: rgba(11, 15, 25, 0.85); border: 2px solid rgba(0, 255, 255, 0.6); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 18px rgba(0,255,255,0.2);">
+                            <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
                                 🛡️ PROVINCIA: {provincia_nombre.upper()}
                             </div>
                             <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 4px;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
                                     <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
                                     <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 4px 0;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
                                     <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
                                     <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
                                 </div>
-                                <div style="margin-top: 8px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase;">Acciones Clave:</div>
-                                <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px;">
-                                    <li>Capturas / Aprehensiones: <b style="color:#ff3333;">{t_cap}</b></li>
-                                    <li>Evacuaciones / Médicas: <b style="color:#00ff66;">{t_med}</b></li>
-                                    <li>Decomisos / Recuperaciones: <b style="color:#ffae00;">{t_dec}</b></li>
-                                    <li>Alteración del Orden: <b style="color:#bd00ff;">{t_alt}</b></li>
-                                    <li>Faltas Adm. / MINSA: <b style="color:#00c8ff;">{t_fal}</b></li>
+                                <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
+                                <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
+                                    <li>Capturas / Aprehensiones: <b style="color:#ff3333;">{c_cap}</b></li>
+                                    <li>Evacuaciones / Médicas: <b style="color:#00ff66;">{c_med}</b></li>
+                                    <li>Decomisos / Recuperaciones: <b style="color:#ffae00;">{c_dec}</b></li>
+                                    <li>Alteración del Orden: <b style="color:#bd00ff;">{c_alt}</b></li>
+                                    <li>Faltas Adm. / MINSA: <b style="color:#00c8ff;">{c_fal}</b></li>
                                 </ul>
                             </div>
                         </div>
