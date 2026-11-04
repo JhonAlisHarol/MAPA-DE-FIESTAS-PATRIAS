@@ -503,7 +503,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- MOTOR DE LECTURA PRECISO Y ESTRICTO (BLINDADO CONTRA FALSOS POSITIVOS) ---
+                # --- MOTOR DE LECTURA ROBUSTO ( RAÍCES AMPLIADAS SIN FALSOS POSITIVOS DE 41 ) ---
                 categorias_lista = [
                     "Aprehendidos (Alteración/Riña/Agresión)",
                     "Aprehendidos (Indocumentados)",
@@ -544,32 +544,31 @@ try:
                         if cant == 0:
                             continue 
                         
-                        # FILTRADO ESTRICTO EXCLUSIVO CON NÚMEROS EXPLÍCITOS
-                        if re.search(r'\b(?:indocumentad|documento)\b', frase):
+                        if re.search(r'\b(?:indocumentad|documento)', frase):
                             res["Aprehendidos (Indocumentados)"] += cant
-                        elif re.search(r'\b(?:libar|livar)\b', frase):
+                        elif re.search(r'\b(?:libar|livar)', frase):
                             res["Aprehendidos (Libar Licor)"] += cant
-                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)\b', frase):
+                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)', frase):
                             res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
-                        elif re.search(r'\b(?:oficio)\b', frase):
+                        elif re.search(r'\b(?:oficio)', frase):
                             res["Aprehendidos (Por Oficio)"] += cant
-                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)\b', frase):
+                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
                             res["Otras Capturas y Conducciones"] += cant
-                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)\b', frase):
+                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|atendida|atendidas|desmay|golpe de calor|persona|personas|afectacion|afectaciones)', frase):
                             res["Atenciones Médicas y Evacuaciones"] += cant
-                        elif re.search(r'\b(?:carnet)\b', frase):
+                        elif re.search(r'\b(?:carnet)', frase):
                             res["Retención de Carnets (Salud)"] += cant
-                        elif re.search(r'\b(?:multa|sancion|citaci|citad|establecimiento|cierre)\b', frase):
+                        elif re.search(r'\b(?:multa|multas|sancion|sancionado|sancionados|citaci|citacion|citaciones)', frase):
                             res["Multas, Sanciones y Citaciones"] += cant
-                        elif re.search(r'\b(?:destrucci|destruid|insalubre)\b', frase):
+                        elif re.search(r'\b(?:destrucci|destruido|insalubre)', frase):
                             res["Destrucción de Alimentos (MINSA)"] += cant
-                        elif re.search(r'\b(?:licor|bebida|cerveza)\b', frase):
+                        elif re.search(r'\b(?:licor|bebida|cerveza)', frase):
                             res["Retención de Licor"] += cant
-                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)\b', frase):
+                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)', frase):
                             res["Decomiso de Armas o Drogas"] += cant
-                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)\b', frase):
+                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)', frase):
                             res["Artículos Varios Decomisados / Recuperados"] += cant
-                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)\b', frase):
+                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)', frase):
                             res["Desalojos y Desórdenes (Multitudes)"] += cant
                             
                     return pd.Series(res)
@@ -577,7 +576,7 @@ try:
                 df_kpi = df_geo[col_rep].apply(analizar_fila)
                 df_geo_procesado = pd.concat([df_geo, df_kpi], axis=1)
 
-                # --- KPIS SUPERIORES DE ACCIONES (SINCRONIZADOS Y LIMPIOS DE FALSOS POSITIVOS) ---
+                # --- KPIS SUPERIORES DE ACCIONES ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
