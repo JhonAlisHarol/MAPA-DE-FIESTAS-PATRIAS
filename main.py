@@ -495,18 +495,26 @@ try:
             else:
                 st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-            # --- MOTOR DE LECTURA POLICIAL PARA ACCIONES RELEVANTES ---
-            st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
+            # --- DICCIONARIO MAESTRO (USADO POR KPIS Y TABLA) ---
+            dict_kws = {
+                "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid'],
+                "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
+                "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci', 'incautad', 'sustancia'],
+                "Retención de Licor": ['licor', 'bebida', 'cerveza'],
+                "Otras Recuperaciones y Decomisos": ['decomis', 'recuperaci', 'recuperad', 'retenci', 'retenid', 'mercancía'],
+                "Alteración del Orden y Riñas": ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agred', 'violencia', 'altercado'],
+                "Desalojos y Control de Multitudes": ['desalojo', 'desalojad', 'multitud'],
+                "Retención de Carnets (Salud)": ['carnet'],
+                "Destrucción de Alimentos (MINSA)": ['destrucci', 'destruid', 'alimento', 'insalubre'],
+                "Multas, Sanciones y Citaciones": ['multa', 'sancion', 'sancionad', 'citaci', 'citad', 'establecimiento', 'cierre']
+            }
+
             def extraer_cantidad_accion(texto, palabras_clave):
                 if pd.isna(texto): return 0
                 texto_str = str(texto).lower()
+                
+                texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
+                texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
                 
                 texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
                 texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
@@ -518,7 +526,6 @@ try:
                 
                 total = 0
                 frases = re.split(r'[.;,\n]|\by\b', texto_str)
-                
                 patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
                 
                 for frase in frases:
@@ -530,15 +537,22 @@ try:
                             total += 1 
                 return total
 
-            # Aplicar el motor a los bloques superiores
-            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['captura', 'aprehensi', 'deteni', 'conducci'])).sum()
-            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'])).sum()
-            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'retenid', 'licor', 'destrucci', 'carnet'])).sum()
-            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí', 'desalojo'])).sum()
-            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento'])).sum()
+            # --- KPIS SUPERIORES DE ACCIONES ---
+            st.markdown("""
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+
+            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Capturas y Aprehensiones"])).sum()
+            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Atenciones Médicas y Evacuaciones"])).sum()
+            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Decomiso de Armas o Drogas"] + dict_kws["Retención de Licor"] + dict_kws["Otras Recuperaciones y Decomisos"])).sum()
+            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Alteración del Orden y Riñas"] + dict_kws["Desalojos y Control de Multitudes"])).sum()
+            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Retención de Carnets (Salud)"] + dict_kws["Destrucción de Alimentos (MINSA)"] + dict_kws["Multas, Sanciones y Citaciones"])).sum()
             
             c1, c2, c3, c4, c5 = st.columns(5)
-            
             with c1:
                 st.markdown(f"""
                 <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
@@ -575,7 +589,7 @@ try:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
+            # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
             st.markdown("""
                 <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -584,44 +598,23 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-            categorias_desglose = {
-                "Capturas y Aprehensiones": ['captura', 'aprehensi', 'deteni', 'conducci'],
-                "Atenciones Médicas y Evacuaciones": ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'],
-                "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci'],
-                "Retención de Licor": ['licor'],
-                "Otras Recuperaciones y Decomisos": ['decomis', 'recuperaci'],
-                "Alteración del Orden y Riñas": ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí'],
-                "Desalojos y Control de Multitudes": ['desalojo'],
-                "Retención de Carnets (Salud)": ['carnet'],
-                "Destrucción de Alimentos (MINSA)": ['destrucci'],
-                "Multas, Sanciones y Citaciones": ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento']
-            }
-            
-            # Crear un dataframe temporal calculando todas las categorías por cada fila
             df_kpi = df_geo.copy()
-            for nombre_cat, palabras in categorias_desglose.items():
+            for nombre_cat, palabras in dict_kws.items():
                 df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
             
-            # Agrupar por la provincia y sumar
-            resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(categorias_desglose.keys())].sum()
-            
-            # Transponer para que las acciones sean las filas y las provincias las columnas
+            resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
             resumen_acciones_t = resumen_acciones.T
-            
-            # Sumar el Total General
             resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
             
-            # Filtrar filas que estén en cero para mantener el panel limpio
+            # Filtra las filas que estén en cero para mantener el reporte limpio
             resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
             
-            # Formatear la tabla final
             resumen_acciones_t = resumen_acciones_t.reset_index()
             resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
             
             if not resumen_acciones_t.empty:
                 df_desglose = resumen_acciones_t
                 
-                # Convertir todo a números enteros menos la primera columna
                 for col in df_desglose.columns:
                     if col != 'Acción / Incidente':
                         df_desglose[col] = df_desglose[col].astype(int)
