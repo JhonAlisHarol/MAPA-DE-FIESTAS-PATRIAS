@@ -503,7 +503,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- MOTOR DE LECTURA ROBUSTO ( RAÍCES AMPLIADAS SIN FALSOS POSITIVOS DE 41 ) ---
+                # --- MOTOR DE LECTURA PRECISO (SIN FALSOS POSITIVOS Y CON MÉDICAS RESTAURADAS) ---
                 categorias_lista = [
                     "Aprehendidos (Alteración/Riña/Agresión)",
                     "Aprehendidos (Indocumentados)",
@@ -554,7 +554,7 @@ try:
                             res["Aprehendidos (Por Oficio)"] += cant
                         elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
                             res["Otras Capturas y Conducciones"] += cant
-                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|atendida|atendidas|desmay|golpe de calor|persona|personas|afectacion|afectaciones)', frase):
+                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendido|atendida|atendidas|desmay|golpe de calor)', frase):
                             res["Atenciones Médicas y Evacuaciones"] += cant
                         elif re.search(r'\b(?:carnet)', frase):
                             res["Retención de Carnets (Salud)"] += cant
