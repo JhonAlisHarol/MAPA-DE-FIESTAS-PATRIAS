@@ -614,16 +614,16 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (TARJETAS TÉCNICAS SIN CEROS)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA TÉCNICO REGIONAL DE FONDO)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 PRESENTACIÓN OPERATIVA | RESUMEN REGIONAL POR PROVINCIA ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
+                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Distribución técnica por provincia. Se omiten los valores en cero para optimizar la lectura ejecutiva.
+                        Distribución territorial de eventos, delegaciones y acciones clave (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -669,6 +669,11 @@ try:
                     )
                 ).reset_index()
 
+                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO ---
+                st.markdown("""
+                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.85), rgba(11, 15, 25, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #1b365d; border-radius: 16px; padding: 25px; box-shadow: inset 0 0 30px rgba(0,0,0,0.8);">
+                """, unsafe_allow_html=True)
+
                 cols_tarjetas = st.columns(3)
                 for index, row in agrupado_prov.iterrows():
                     col_idx = index % 3
@@ -681,7 +686,6 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Construir elementos de acciones clave solo si son mayores a 0
                     acciones_html = ""
                     if c_cap > 0:
                         acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
@@ -699,7 +703,7 @@ try:
 
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.85); border: 2px solid rgba(0, 255, 255, 0.6); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 18px rgba(0,255,255,0.2);">
+                        <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
                             <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
                                 🛡️ PROVINCIA: {provincia_nombre.upper()}
                             </div>
@@ -719,6 +723,8 @@ try:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
+
+                st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
 
