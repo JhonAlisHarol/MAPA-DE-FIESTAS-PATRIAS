@@ -153,7 +153,6 @@ def limpiar_numeros_llamadas(val):
     except:
         return 0
 
-# AQUI ESTÁ EL TRY QUE FALTABA PARA EVITAR EL ERROR SYNTAXERROR
 try:
     df = cargar_datos_bitacora()
 
@@ -502,7 +501,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- DICCIONARIO MAESTRO (BLINDADO CON NUEVAS PALABRAS DE CAPTURAS) ---
+                # --- DICCIONARIO MAESTRO (LIMPIADO Y CORREGIDO) ---
                 dict_kws = {
                     "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid', 'indocumentad', 'libar', 'livar', 'oficio', 'alteraci', 'riña', 'agresi', 'agred'],
                     "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
@@ -612,10 +611,12 @@ try:
                 resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
                 
                 if not resumen_acciones.empty:
+                    # Limpiar provincias y categorías vacías
+                    resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
+                    resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
+                    
                     resumen_acciones_t = resumen_acciones.T
                     resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
-                    
-                    resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
                     
                     if not resumen_acciones_t.empty:
                         resumen_acciones_t = resumen_acciones_t.reset_index()
