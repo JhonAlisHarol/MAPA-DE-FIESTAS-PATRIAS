@@ -4,6 +4,7 @@ import folium
 from folium.plugins import HeatMap, MarkerCluster, Fullscreen
 from streamlit_folium import st_folium
 import html
+import datetime
 
 st.set_page_config(
     page_title="Centro de Operación Nacional | Mapa Táctico C5",
@@ -139,7 +140,11 @@ try:
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
     col_img = next((c for c in df.columns if any(x in c for x in ["IMAGEN", "EVIDENCIA", "FOTO", "URL", "IMG", "ADJUNTO", "LINK"])), None)
 
-    # --- PANEL LATERAL ---
+    # Convertir fechas al formato correcto para los filtros
+    if col_dia and not df_geo.empty:
+        df_geo['Fecha_dt'] = pd.to_datetime(df_geo[col_dia], dayfirst=True, errors='coerce')
+
+    # --- PANEL LATERAL Y FILTROS ---
     with st.sidebar:
         st.markdown("### ⚙️ Panel de Control Operativo")
         
@@ -148,8 +153,38 @@ try:
             st.rerun()
             
         st.markdown("---")
-        st.metric(label="Total Registros Analizados", value=f"{len(df):,}")
-        st.metric(label="Casos Georreferenciados (Activos)", value=f"{len(df_geo):,}")
+        
+        # Filtro 1: Rango de Fechas (Por defecto Noviembre del año actual)
+        st.markdown("#### 📅 Fecha de Reporte")
+        hoy = datetime.date.today()
+        rango_fechas = st.date_input(
+            "Seleccione rango (Desde - Hasta):",
+            value=(datetime.date(hoy.year, 11, 1), datetime.date(hoy.year, 11, 30)),
+            format="DD/MM/YYYY"
+        )
+        
+        # Filtro 2: Centros
+        centro_seleccionado = "TODOS"
+        if col_centro and not df_geo.empty:
+            st.markdown("#### 🏢 Centro / Ubicación")
+            lista_centros = ["TODOS"] + sorted([str(x) for x in df_geo[col_centro].dropna().unique() if str(x).strip() != ""])
+            centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
+
+    # --- APLICACIÓN DE LOS FILTROS AL DATAFRAME ---
+    # Filtrar por fecha
+    if col_dia and 'Fecha_dt' in df_geo.columns:
+        if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
+            fecha_inicio, fecha_fin = rango_fechas
+            df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
+            
+    # Filtrar por Centro
+    if col_centro and centro_seleccionado != "TODOS":
+        df_geo = df_geo[df_geo[col_centro].astype(str) == centro_seleccionado]
+
+    # --- MOSTRAR CONTADOR ACTUALIZADO EN EL PANEL ---
+    with st.sidebar:
+        st.markdown("---")
+        st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
 
     # --- SELECTOR DE CAPAS ---
     modo_mapa = st.radio(
@@ -287,9 +322,8 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
-        st.success(f"🗺️ Visualizando **{len(df_geo):,}** incidentes georreferenciados. (Motor Acelerado Activado)")
     else:
-        st.warning("⚠️ No se encontraron las columnas 'LATITUD' y 'LONGITUD'. Asegúrate de que estén escritas así en Google Sheets.")
+        st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
         
 except Exception as e:
     st.error(f"Error procesando la bitácora: {e}")
