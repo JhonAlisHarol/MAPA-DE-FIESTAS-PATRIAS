@@ -537,10 +537,9 @@ try:
                     for frase in frases:
                         if re.search(patron_kws, frase):
                             numeros = re.findall(r'\b(\d+)\b', frase)
+                            # CORRECCIÓN: SOLO SUMA SI HAY UN NÚMERO EXPLÍCITO. (Se eliminó el "else: total += 1")
                             if numeros:
-                                total += sum(int(n) for n in numeros)
-                            else:
-                                total += 1 
+                                total += int(numeros[0])
                     return total
 
                 # --- KPIS SUPERIORES DE ACCIONES ---
@@ -611,7 +610,7 @@ try:
                 resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
                 
                 if not resumen_acciones.empty:
-                    # Limpiar provincias y categorías vacías
+                    # Ocultar provincias vacías y filas de acciones en 0
                     resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
                     resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
                     
