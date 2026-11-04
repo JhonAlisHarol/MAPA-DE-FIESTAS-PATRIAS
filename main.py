@@ -217,7 +217,7 @@ try:
         if col_centro and centro_seleccionado != "TODOS":
             df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
 
-        # --- PREPARACIÓN DEL MAPA PRINCIPAL ---
+        # --- PREPARACIÓN DEL MAPA ---
         if col_lat and col_lon:
             df_mapa['Lat_clean'] = pd.to_numeric(
                 df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
@@ -232,18 +232,91 @@ try:
         else:
             df_geo = pd.DataFrame()
 
-        # Contador de Casos en barra lateral
+        # Variable global de provincia para evitar errores de alcance
+        col_grupo_prov = col_provincia if col_provincia else col_zona
+
+        # Contador en barra lateral
         with st.sidebar:
             st.markdown("---")
             st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
 
+        # --- MOTOR DE LECTURA ROBUSTO ---
+        categorias_lista = [
+            "Aprehendidos (Alteración/Riña/Agresión)",
+            "Aprehendidos (Indocumentados)",
+            "Aprehendidos (Libar Licor)",
+            "Aprehendidos (Por Oficio)",
+            "Otras Capturas y Conducciones",
+            "Atenciones Médicas y Evacuaciones",
+            "Decomiso de Armas o Drogas",
+            "Retención de Licor",
+            "Artículos Varios Decomisados / Recuperados",
+            "Desalojos y Desórdenes (Multitudes)",
+            "Retención de Carnets (Salud)",
+            "Destrucción de Alimentos (MINSA)",
+            "Multas, Sanciones y Citaciones"
+        ]
+
+        def analizar_fila(texto):
+            res = {c: 0 for c in categorias_lista}
+            if pd.isna(texto): return pd.Series(res)
+            texto_str = str(texto).lower()
+            
+            texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
+            texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
+            
+            texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
+            texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
+            texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
+            texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
+            texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
+            texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
+            texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
+            
+            frases = re.split(r'[.;,\n]|\by\b', texto_str)
+            
+            for frase in frases:
+                numeros = re.findall(r'\b(\d+)\b', frase)
+                cant = sum(int(n) for n in numeros) if numeros else 0
+                if cant == 0:
+                    continue 
+                
+                if re.search(r'\b(?:indocumentad|documento)', frase):
+                    res["Aprehendidos (Indocumentados)"] += cant
+                elif re.search(r'\b(?:libar|livar)', frase):
+                    res["Aprehendidos (Libar Licor)"] += cant
+                elif re.search(r'\b(?:alteraci|riña|agresi|agred)', frase):
+                    res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
+                elif re.search(r'\b(?:oficio)', frase):
+                    res["Aprehendidos (Por Oficio)"] += cant
+                elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
+                    res["Otras Capturas y Conducciones"] += cant
+                elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendido|atendida|atendidas|desmay|golpe de calor)', frase):
+                    res["Atenciones Médicas y Evacuaciones"] += cant
+                elif re.search(r'\b(?:carnet)', frase):
+                    res["Retención de Carnets (Salud)"] += cant
+                elif re.search(r'\b(?:multa|multas|sancion|sancionado|sancionados|citaci|citacion|citaciones)', frase):
+                    res["Multas, Sanciones y Citaciones"] += cant
+                elif re.search(r'\b(?:destrucci|destruido|insalubre)', frase):
+                    res["Destrucción de Alimentos (MINSA)"] += cant
+                elif re.search(r'\b(?:licor|bebida|cerveza)', frase):
+                    res["Retención de Licor"] += cant
+                elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)', frase):
+                    res["Decomiso de Armas o Drogas"] += cant
+                elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)', frase):
+                    res["Artículos Varios Decomisados / Recuperados"] += cant
+                elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)', frase):
+                    res["Desalojos y Desórdenes (Multitudes)"] += cant
+                    
+            return pd.Series(res)
+
         # --- SISTEMA DE PESTAÑAS (TABS) ---
-        pestania_operativa, pestania_presentacion = st.tabs(["🗺️ Tablero Operativo Táctico", "📊 Presentación Operaciones"])
+        tab_tactico, tab_presentacion = st.tabs(["🗺️ Tablero Operativo Táctico", "📊 Presentación Operaciones"])
 
         # ==========================================
         # PESTAÑA 1: TABLERO OPERATIVO TÁCTICO
         # ==========================================
-        with pestania_operativa:
+        with tab_tactico:
             if len(cols_ll_rec) > 0:
                 st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
                 opcion_sla = st.radio(
@@ -251,7 +324,7 @@ try:
                     ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
                     horizontal=True,
                     label_visibility="collapsed",
-                    key="radio_sla"
+                    key="radio_sla_main"
                 )
                 st.write("") 
                 
@@ -308,7 +381,7 @@ try:
                 ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
                 index=0,
                 horizontal=True,
-                key="radio_modo_mapa"
+                key="radio_modo_mapa_main"
             )
 
             if not df_geo.empty:
@@ -431,76 +504,7 @@ try:
 
                 st_folium(m, height=750, use_container_width=True, returned_objects=[])
                 
-                # --- MOTOR DE LECTURA ROBUSTO ---
-                categorias_lista = [
-                    "Aprehendidos (Alteración/Riña/Agresión)",
-                    "Aprehendidos (Indocumentados)",
-                    "Aprehendidos (Libar Licor)",
-                    "Aprehendidos (Por Oficio)",
-                    "Otras Capturas y Conducciones",
-                    "Atenciones Médicas y Evacuaciones",
-                    "Decomiso de Armas o Drogas",
-                    "Retención de Licor",
-                    "Artículos Varios Decomisados / Recuperados",
-                    "Desalojos y Desórdenes (Multitudes)",
-                    "Retención de Carnets (Salud)",
-                    "Destrucción de Alimentos (MINSA)",
-                    "Multas, Sanciones y Citaciones"
-                ]
-
-                def analizar_fila(texto):
-                    res = {c: 0 for c in categorias_lista}
-                    if pd.isna(texto): return pd.Series(res)
-                    texto_str = str(texto).lower()
-                    
-                    texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
-                    texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
-                    
-                    texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
-                    texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
-                    texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
-                    texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
-                    texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
-                    texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
-                    texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
-                    
-                    frases = re.split(r'[.;,\n]|\by\b', texto_str)
-                    
-                    for frase in frases:
-                        numeros = re.findall(r'\b(\d+)\b', frase)
-                        cant = sum(int(n) for n in numeros) if numeros else 0
-                        if cant == 0:
-                            continue 
-                        
-                        if re.search(r'\b(?:indocumentad|documento)', frase):
-                            res["Aprehendidos (Indocumentados)"] += cant
-                        elif re.search(r'\b(?:libar|livar)', frase):
-                            res["Aprehendidos (Libar Licor)"] += cant
-                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)', frase):
-                            res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
-                        elif re.search(r'\b(?:oficio)', frase):
-                            res["Aprehendidos (Por Oficio)"] += cant
-                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
-                            res["Otras Capturas y Conducciones"] += cant
-                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendido|atendida|atendidas|desmay|golpe de calor)', frase):
-                            res["Atenciones Médicas y Evacuaciones"] += cant
-                        elif re.search(r'\b(?:carnet)', frase):
-                            res["Retención de Carnets (Salud)"] += cant
-                        elif re.search(r'\b(?:multa|multas|sancion|sancionado|sancionados|citaci|citacion|citaciones)', frase):
-                            res["Multas, Sanciones y Citaciones"] += cant
-                        elif re.search(r'\b(?:destrucci|destruido|insalubre)', frase):
-                            res["Destrucción de Alimentos (MINSA)"] += cant
-                        elif re.search(r'\b(?:licor|bebida|cerveza)', frase):
-                            res["Retención de Licor"] += cant
-                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)', frase):
-                            res["Decomiso de Armas o Drogas"] += cant
-                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)', frase):
-                            res["Artículos Varios Decomisados / Recuperados"] += cant
-                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)', frase):
-                            res["Desalojos y Desórdenes (Multitudes)"] += cant
-                            
-                    return pd.Series(res)
-
+                # Procesamiento para KPIs y Tabla
                 df_kpi = df_geo[col_rep].apply(analizar_fila)
                 df_geo_procesado = pd.concat([df_geo, df_kpi], axis=1)
 
@@ -600,7 +604,7 @@ try:
                                 data=csv,
                                 file_name='Desglose_Provincial.csv',
                                 mime='text/csv',
-                                key="btn_download_operativo"
+                                key="btn_download_tactico"
                             )
                     else:
                         st.info("No se detectaron acciones policiales o administrativas para desglosar en este rango de fechas.")
@@ -610,25 +614,23 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (ESTÁTICA TÉCNICA)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES
         # ==========================================
-        with pestania_presentacion:
+        with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
                         📊 RESUMEN TÉCNICO REGIONAL | PERÍODO: {fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')}
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Informe ejecutivo con desglose de eventos, delegaciones y acciones operativas clave por provincia.
+                        Presentación ejecutiva estructurada con base en el filtrado temporal operativo del C5.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
 
             if col_rep and col_grupo_prov and not df_base_fecha.empty:
-                # Procesar datos para la presentación basados en el rango temporal seleccionado en la barra lateral
                 df_pres = df_base_fecha.copy()
                 
-                # Extraer delegaciones
                 def extraer_delegaciones_pres(texto):
                     if pd.isna(texto): return 0
                     texto_str = str(texto).lower()
@@ -640,12 +642,9 @@ try:
                     return 0
 
                 df_pres['Cant_Del'] = df_pres[col_rep].apply(extraer_delegaciones_pres)
-                
-                # Aplicar el analizador analítico por provincia
                 df_pres_kpi = df_pres[col_rep].apply(analizar_fila)
                 df_pres_full = pd.concat([df_pres, df_pres_kpi], axis=1)
                 
-                # Agrupar por Provincia
                 agrupado_prov = df_pres_full.groupby(col_grupo_prov).agg(
                     Total_Eventos=(col_grupo_prov, 'count'),
                     Total_Delegaciones=('Cant_Del', 'sum'),
@@ -662,7 +661,6 @@ try:
                     Faltas=('Multas, Sanciones y Citaciones', 'sum')
                 ).reset_index()
 
-                # Mostrar las tarjetas técnicas estilo diapositiva por provincia
                 cols_tarjetas = st.columns(3)
                 for index, row in agrupado_prov.iterrows():
                     col_idx = index % 3
@@ -702,7 +700,7 @@ try:
                         </div>
                         """, unsafe_allow_html=True)
             else:
-                st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar el resumen técnico de presentación.")
+                st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
 
     else:
         st.warning("⚠️ No hay incidentes cargados en la base de datos de Google Sheets.")
