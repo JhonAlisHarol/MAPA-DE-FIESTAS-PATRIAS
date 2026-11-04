@@ -63,7 +63,6 @@ st.markdown("""
     /* Contenedor Transparente con Borde Neón Patriótico */
     .neon-title-container {
         border: 4px solid transparent;
-        /* El primer 'transparent' elimina el fondo oscuro interno */
         background: linear-gradient(transparent, transparent), 
                     linear-gradient(90deg, #0000FF 10%, #FFFFFF 50%, #FF0000 90%);
         background-origin: border-box;
@@ -86,7 +85,6 @@ st.markdown("""
         background: linear-gradient(90deg, #0000FF 0%, #0000FF 30%, #FFFFFF 45%, #FFFFFF 55%, #FF0000 70%, #FF0000 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        /* Sombra oscura fuerte para que resalte sin importar el color del fondo */
         filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.9)); 
     }
     
@@ -127,7 +125,7 @@ def cargar_datos_bitacora():
     df = df.reset_index(drop=True)
     return df
 
-# Función auxiliar para extraer la hora como número entero (0-23)
+# Funciones de extracción y limpieza
 def extraer_hora(hora_str):
     try:
         hora_str = str(hora_str).strip()
@@ -136,6 +134,16 @@ def extraer_hora(hora_str):
         return int(float(hora_str))
     except:
         return -1
+
+def limpiar_numeros_llamadas(val):
+    if pd.isna(val) or str(val).strip() == "":
+        return 0
+    # Eliminar puntos de miles (ej. 3.890 -> 3890)
+    val_str = str(val).replace('.', '').replace(',', '').strip()
+    try:
+        return int(float(val_str))
+    except:
+        return 0
 
 try:
     df = cargar_datos_bitacora()
@@ -158,13 +166,19 @@ try:
     else:
         df_geo = pd.DataFrame()
 
-    # Identificación de columnas descriptivas
+    # Identificación de columnas principales
     col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
     col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
     col_hora = next((c for c in df.columns if "HORA" in c), None)
     col_zona = next((c for c in df.columns if "ZONA" in c or "SERVICIO" in c), None)
     col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
+    
+    # Identificación de columnas de Llamadas
+    col_ll_rec = next((c for c in df.columns if "RECIBIDA" in c), None)
+    col_ll_cont = next((c for c in df.columns if "CONTESTADA" in c), None)
+    col_ll_aban = next((c for c in df.columns if "ABANDONADA" in c), None)
+    col_i_crea = next((c for c in df.columns if "CREADO" in c), None)
 
     # Convertir fechas y horas para el filtro
     if col_dia and not df_geo.empty:
@@ -198,21 +212,53 @@ try:
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
     # --- APLICAR FILTROS ---
-    # 1. Filtro de Fechas
     if col_dia and 'Fecha_dt' in df_geo.columns:
         df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
     
-    # 2. Filtro de Horas
     if col_hora and 'Hora_int' in df_geo.columns:
         df_geo = df_geo[((df_geo['Hora_int'] >= hora_inicial) & (df_geo['Hora_int'] <= hora_final)) | (df_geo['Hora_int'] == -1)]
             
-    # 3. Filtro de Centro
     if col_centro and centro_seleccionado != "TODOS":
         df_geo = df_geo[df_geo[col_centro].astype(str) == centro_seleccionado]
 
     with st.sidebar:
         st.markdown("---")
         st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
+
+    # --- MÉTRICAS DE LLAMADAS (DINÁMICAS SEGÚN LA FECHA FILTRADA) ---
+    if col_ll_rec:
+        t_rec = sum(df_geo[col_ll_rec].apply(limpiar_numeros_llamadas))
+        t_cont = sum(df_geo[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
+        t_aban = sum(df_geo[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
+        t_crea = sum(df_geo[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
+        
+        # Matemáticas en vivo para no depender del % pegado en excel
+        pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
+        
+        st.markdown(f"""
+        <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
+            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
+                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. RECIBIDAS</div>
+                <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec:,}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. CONTESTADAS</div>
+                <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont:,}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. ABANDONADAS</div>
+                <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban:,}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">INCIDENTES CREADOS</div>
+                <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea:,}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">% PRODUCTIVIDAD</div>
+                <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod:.1f}%</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # --- MAPA ---
     modo_mapa = st.radio(
@@ -346,7 +392,7 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
-        # --- TABLERO TÁCTICO DE ZONAS (CONFIGURACIÓN TRANSPARENTE Y PEQUEÑA) ---
+        # --- TABLERO TÁCTICO DE ZONAS ---
         if col_zona:
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
@@ -359,7 +405,6 @@ try:
             resumen_zonas = df_geo[col_zona].value_counts().reset_index()
             resumen_zonas.columns = ['Zona Policial', 'Cantidad']
             
-            # 6 columnas para hacer los cuadros mucho más pequeños
             cols = st.columns(6) 
             for idx, row in resumen_zonas.iterrows():
                 col_idx = idx % 6
