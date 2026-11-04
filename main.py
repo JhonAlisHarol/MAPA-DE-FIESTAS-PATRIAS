@@ -684,7 +684,7 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Construir elementos de acciones clave SOLO si son mayores a 0 (sin dejar fragmentos de HTML rotos)
+                    # Construir elementos de acciones clave SOLO si son mayores a 0, evitando bloques vacíos o mal cerrados
                     acciones_html = ""
                     if c_cap > 0:
                         acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
@@ -697,13 +697,18 @@ try:
                     if c_fal > 0:
                         acciones_html += f"<li>Faltas Adm. / MINSA: <b style='color:#00c8ff;'>{c_fal}</b></li>"
                     
-                    seccion_acciones = ""
                     if acciones_html:
                         seccion_acciones = f"""
                         <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
                         <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
                             {acciones_html}
                         </ul>
+                        """
+                    else:
+                        seccion_acciones = """
+                        <div style="margin-top: 6px; font-weight: bold; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-style: italic;">
+                            Sin acciones clave registradas
+                        </div>
                         """
 
                     with cols_tarjetas[col_idx]:
