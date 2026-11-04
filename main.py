@@ -22,14 +22,14 @@ st.markdown("""
     div[data-testid="stToolbar"] {display: none !important;}
     button[kind="header"] {display: none !important;}
     
-    /* Fondo con la Bandera de Panamá y cristal oscuro táctico para legibilidad */
+    /* Fondo con la Bandera de Panamá más clara y viva (Opacidad reducida al 50%) */
     .bg-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-image: linear-gradient(rgba(11, 15, 25, 0.85), rgba(11, 15, 25, 0.85)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-image: linear-gradient(rgba(11, 15, 25, 0.50), rgba(11, 15, 25, 0.50)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -37,9 +37,11 @@ st.markdown("""
         pointer-events: none;
     }
 
+    /* Sombras en el texto general para asegurar que se lea bien sobre el fondo más claro */
     .stApp, .block-container, [data-testid="stVerticalBlock"] {
         background: transparent !important;
         color: #ffffff;
+        text-shadow: 0px 1px 3px rgba(0,0,0,0.8);
     }
     
     /* Panel Lateral Transparente (Cristal Ahumado) para ver la bandera */
@@ -269,7 +271,7 @@ try:
                 """
 
             return f"""
-            <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c;">
+            <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c; text-shadow: none;">
                 <div style="background-color: #1b365d; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 13px;">
                     🚨 CASO N° {num_ev} — {hora_ev}
                 </div>
