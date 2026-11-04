@@ -3,8 +3,6 @@ import pandas as pd
 import folium
 from folium.plugins import HeatMap, MarkerCluster, Fullscreen
 from streamlit_folium import st_folium
-import base64
-import glob
 import html
 
 st.set_page_config(
@@ -13,76 +11,44 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. CARGA DE VIDEO DE FONDO CON CACHÉ ---
-@st.cache_data
-def obtener_video_base64():
-    archivos_video = glob.glob("*VIDEO*.mp4") + glob.glob("*video*.mp4") + glob.glob("*.mp4")
-    if archivos_video:
-        try:
-            with open(archivos_video[0], "rb") as f:
-                return base64.b64encode(f.read()).decode()
-        except Exception:
-            pass
-    return ""
-
-video_base64 = obtener_video_base64()
-
-# --- 2. ESTILOS VISUALES Y EFECTOS NEÓN CORPORATIVOS ---
-st.markdown(f"""
+# --- ESTILOS VISUALES Y FONDO TÁCTICO LIGERO ---
+st.markdown("""
     <style>
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
-    .stDeployButton {{display: none !important;}}
-    div[data-testid="stToolbar"] {{display: none !important;}}
-    button[kind="header"] {{display: none !important;}}
-    .viewerBadge_container__1QSob {{display: none !important;}}
-    iframe[title="streamlit/streamlit/static"] {{display: none !important;}}
-    div.creator-badge {{display: none !important;}}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display: none !important;}
+    div[data-testid="stToolbar"] {display: none !important;}
+    button[kind="header"] {display: none !important;}
     
-    .video-background {{
+    .bg-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        z-index: -99999;
-        overflow: hidden;
-        pointer-events: none;
-    }}
-    .video-background video {{
-        width: 100vw;
-        height: 100vh;
-        object-fit: cover;
-    }}
-
-    .bg-overlay {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(11, 15, 25, 0.78);
+        background: radial-gradient(circle at center, #1b365d 0%, #0b0f19 80%);
         z-index: -99998;
         pointer-events: none;
-    }}
+    }
 
-    .stApp, .block-container, [data-testid="stVerticalBlock"] {{
+    .stApp, .block-container, [data-testid="stVerticalBlock"] {
         background: transparent !important;
         color: #ffffff;
-    }}
+    }
     
-    [data-testid="stSidebar"] {{
-        background-color: rgba(11, 15, 25, 0.90) !important;
-    }}
+    [data-testid="stSidebar"] {
+        background-color: rgba(11, 15, 25, 0.95) !important;
+        border-right: 1px solid #1b365d;
+    }
     
-    @keyframes neonBorderMove {{
-        0% {{ background-position: 0% 50%; }}
-        50% {{ background-position: 100% 50%; }}
-        100% {{ background-position: 0% 50%; }}
-    }}
+    @keyframes neonBorderMove {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
 
-    .neon-title-container {{
+    .neon-title-container {
         border: 4px solid transparent;
         background: linear-gradient(135deg, rgba(16, 24, 40, 0.9) 0%, rgba(11, 15, 25, 0.9) 100%), 
                     linear-gradient(90deg, #ff0055, #00ffff, #00ff66, #ffae00, #bd00ff, #ff0055);
@@ -95,35 +61,29 @@ st.markdown(f"""
         text-align: center;
         box-shadow: 0 0 25px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(255, 0, 85, 0.3);
         margin-bottom: 20px;
-    }}
+    }
     
-    .neon-title-text {{
+    .neon-title-text {
         color: #00ffff;
         font-size: 26px;
         font-weight: 800;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         letter-spacing: 1.5px;
         text-shadow: 0 0 15px rgba(0, 255, 255, 0.9), 0 0 25px rgba(255, 0, 85, 0.6);
-    }}
+    }
     
-    .neon-sub-text {{
+    .neon-sub-text {
         color: #ffae00;
         font-size: 13px;
         font-style: italic;
         margin-top: 8px;
         text-shadow: 0 0 10px rgba(255, 174, 0, 0.8);
-    }}
+    }
     </style>
-    
-    <div class="video-background">
-        <video autoplay loop muted playsinline>
-            <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-        </video>
-    </div>
     <div class="bg-overlay"></div>
 """, unsafe_allow_html=True)
 
-# --- 3. ENCABEZADO PRINCIPAL ---
+# --- ENCABEZADO PRINCIPAL ---
 st.markdown("""
     <div class="neon-title-container">
         <div class="neon-title-text">🛰️ CENTRO DE OPERACIÓN NACIONAL | BITÁCORA DESFILES PATRIOS</div>
@@ -131,11 +91,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 4. CONEXIÓN A GOOGLE SHEETS Y PROCESAMIENTO ---
-@st.cache_data(ttl=30)
+# --- CONEXIÓN OPTIMIZADA A GOOGLE SHEETS ---
+@st.cache_data(ttl=45)
 def cargar_datos_bitacora():
     url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
-    
     df_raw = pd.read_csv(url_csv, header=None)
     
     fila_encabezado = 0
@@ -145,14 +104,15 @@ def cargar_datos_bitacora():
             fila_encabezado = i
             break
     
-    df = pd.read_csv(url_csv, header=fila_encabezado)
-    df.columns = df.columns.astype(str).str.strip().str.upper()
+    df = df_raw.iloc[fila_encabezado+1:].copy()
+    df.columns = df_raw.iloc[fila_encabezado].astype(str).str.strip().str.upper()
+    df = df.reset_index(drop=True)
     return df
 
 try:
     df = cargar_datos_bitacora()
 
-    # Limpieza y detección flexible de coordenadas
+    # Limpieza de coordenadas
     col_lat = next((c for c in df.columns if "LAT" in c), None)
     col_lon = next((c for c in df.columns if "LON" in c or "LNG" in c), None)
 
@@ -170,30 +130,30 @@ try:
     else:
         df_geo = pd.DataFrame()
 
-    # Identificación de columnas descriptivas
+    # Identificación de columnas (Se amplió la búsqueda para fotos)
     col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
     col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
     col_hora = next((c for c in df.columns if "HORA" in c), None)
     col_zona = next((c for c in df.columns if "ZONA" in c or "SERVICIO" in c), None)
     col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
-    col_img = next((c for c in df.columns if "IMAGEN" in c or "EVIDENCIA" in c or "FOTO" in c or "URL" in c or "IMG" in c), None)
+    col_img = next((c for c in df.columns if any(x in c for x in ["IMAGEN", "EVIDENCIA", "FOTO", "URL", "IMG", "ADJUNTO", "LINK"])), None)
 
-    # --- PANEL LATERAL OPERATIVO ---
+    # --- PANEL LATERAL ---
     with st.sidebar:
-        st.markdown("### ⚙️ Panel de Control")
+        st.markdown("### ⚙️ Panel de Control Operativo")
         
         if st.button("🔄 Refrescar Bitácora", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
             
         st.markdown("---")
-        st.metric(label="Total Registros Bitácora", value=f"{len(df):,}")
-        st.metric(label="Casos Georreferenciados", value=f"{len(df_geo):,}")
+        st.metric(label="Total Registros Analizados", value=f"{len(df):,}")
+        st.metric(label="Casos Georreferenciados (Activos)", value=f"{len(df_geo):,}")
 
     # --- SELECTOR DE CAPAS ---
     modo_mapa = st.radio(
-        "Capa de Visualización:",
+        "Capa de Visualización Táctica:",
         ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
         index=0,
         horizontal=True
@@ -203,7 +163,7 @@ try:
         lat_centro = df_geo['Lat_clean'].median()
         lon_centro = df_geo['Lon_clean'].median()
 
-        m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11)
+        m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11, prefer_canvas=True)
         folium.TileLayer(
             tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
             attr='Google Hybrid',
@@ -214,7 +174,7 @@ try:
 
         Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-        # Función para crear el popup táctico interno al hacer clic
+        # Función para crear el popup táctico con imágenes corregidas
         def generar_popup_html(row, idx):
             num_ev = str(row.get(col_num, idx + 1)).replace(".0", "")
             if len(num_ev) > 15:
@@ -231,23 +191,33 @@ try:
             url_img = str(row.get(col_img, "")).strip() if col_img else ""
             html_foto = ""
             
-            if url_img and url_img.lower() != "nan":
+            if url_img and url_img.lower() != "nan" and url_img.startswith("http"):
+                url_mostrar = url_img 
+                
+                # BYPASS de seguridad para imágenes de Google Drive
                 if "drive.google.com/file/d/" in url_img:
-                    id_foto = url_img.split("/file/d/")[1].split("/")[0]
-                    url_img = f"https://drive.google.com/uc?export=view&id={id_foto}"
+                    try:
+                        id_foto = url_img.split("/file/d/")[1].split("/")[0]
+                        url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w500"
+                    except:
+                        pass
                 elif "drive.google.com/open?id=" in url_img:
-                    id_foto = url_img.split("id=")[1].split("&")[0]
-                    url_img = f"https://drive.google.com/uc?export=view&id={id_foto}"
+                    try:
+                        id_foto = url_img.split("id=")[1].split("&")[0]
+                        url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w500"
+                    except:
+                        pass
 
-                if url_img.startswith("http"):
-                    html_foto = f"""
-                    <div style="margin-top: 8px; text-align: center; background: #000; padding: 4px; border-radius: 4px;">
-                        <a href="{url_img}" target="_blank">
-                            <img src="{url_img}" style="width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
-                        </a>
-                        <div style="font-size: 10px; color: #a0aec0; margin-top: 3px;">(Clic en la foto para ampliar)</div>
-                    </div>
-                    """
+                html_foto = f"""
+                <div style="margin-top: 10px; text-align: center; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px solid #1b365d;">
+                    <a href="{url_img}" target="_blank" style="text-decoration: none; color: #00ffff; font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; padding: 4px; background: rgba(0,255,255,0.1); border-radius: 4px;">
+                        📸 Abrir Evidencia Original
+                    </a>
+                    <a href="{url_img}" target="_blank">
+                        <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia (Clic para ver original)">
+                    </a>
+                </div>
+                """
 
             return f"""
             <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c;">
@@ -282,7 +252,7 @@ try:
         else:
             es_cluster = "Cluster" in modo_mapa
             if es_cluster:
-                grupo_marcadores = MarkerCluster(maxClusterRadius=45).add_to(m)
+                grupo_marcadores = MarkerCluster(maxClusterRadius=45, disableClusteringAtZoom=16).add_to(m)
             else:
                 grupo_marcadores = m
 
@@ -296,8 +266,9 @@ try:
                     tooltip=f"Caso N° {id_num}: Clic para ver reporte"
                 ).add_to(grupo_marcadores)
 
-        st_folium(m, height=750, use_container_width=True)
-        st.success(f"🗺️ Visualizando **{len(df_geo):,}** incidentes georreferenciados en el mapa táctico.")
+        st_folium(m, height=750, use_container_width=True, returned_objects=[])
+        
+        st.success(f"🗺️ Visualizando **{len(df_geo):,}** incidentes georreferenciados. (Motor Acelerado Activado)")
     else:
         st.warning("⚠️ No se encontraron las columnas 'LATITUD' y 'LONGITUD'. Asegúrate de que estén escritas así en Google Sheets.")
         
