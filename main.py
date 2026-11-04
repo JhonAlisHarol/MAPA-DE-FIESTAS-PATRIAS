@@ -130,7 +130,7 @@ try:
     else:
         df_geo = pd.DataFrame()
 
-    # Identificación de columnas (Se amplió la búsqueda para fotos)
+    # Identificación de columnas 
     col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
     col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
     col_hora = next((c for c in df.columns if "HORA" in c), None)
@@ -174,7 +174,7 @@ try:
 
         Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-        # Función para crear el popup táctico con imágenes corregidas
+        # Función para crear el popup táctico
         def generar_popup_html(row, idx):
             num_ev = str(row.get(col_num, idx + 1)).replace(".0", "")
             if len(num_ev) > 15:
@@ -194,7 +194,6 @@ try:
             if url_img and url_img.lower() != "nan" and url_img.startswith("http"):
                 url_mostrar = url_img 
                 
-                # BYPASS de seguridad para imágenes de Google Drive
                 if "drive.google.com/file/d/" in url_img:
                     try:
                         id_foto = url_img.split("/file/d/")[1].split("/")[0]
@@ -259,9 +258,29 @@ try:
             for idx, row in df_geo.iterrows():
                 popup_content, id_num = generar_popup_html(row, idx)
 
+                # ICONO TÁCTICO DE FIESTAS PATRIAS (Bandera de Panamá en imagen)
+                icono_patrio = folium.DivIcon(
+                    html=f"""
+                    <div style="
+                        background-color: rgba(11, 15, 25, 0.9);
+                        border: 2px solid #00ffff;
+                        border-radius: 50%;
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        box-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
+                        overflow: hidden;
+                    ">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" style="width: 20px; height: 14px; object-fit: cover; border-radius: 2px;">
+                    </div>
+                    """
+                )
+
                 folium.Marker(
                     location=[row['Lat_clean'], row['Lon_clean']],
-                    icon=folium.Icon(color='red', icon='info-sign'), 
+                    icon=icono_patrio, 
                     popup=folium.Popup(popup_content, max_width=320, show=False),
                     tooltip=f"Caso N° {id_num}: Clic para ver reporte"
                 ).add_to(grupo_marcadores)
