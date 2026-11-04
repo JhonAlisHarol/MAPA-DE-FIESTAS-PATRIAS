@@ -95,6 +95,14 @@ st.markdown("""
         margin-top: 8px;
         text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.9);
     }
+    
+    /* Estilos del selector SLA */
+    div.row-widget.stRadio > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+    }
     </style>
     <div class="bg-overlay"></div>
 """, unsafe_allow_html=True)
@@ -121,7 +129,20 @@ def cargar_datos_bitacora():
             break
     
     df = df_raw.iloc[fila_encabezado+1:].copy()
-    df.columns = df_raw.iloc[fila_encabezado].astype(str).str.strip().str.upper()
+    
+    # Sistema para evitar errores con columnas de Excel duplicadas (CON-C5 y CORCOL)
+    columnas_crudas = df_raw.iloc[fila_encabezado].astype(str).str.strip().str.upper().tolist()
+    nuevas_cols = []
+    vistos = {}
+    for c in columnas_crudas:
+        if c in vistos:
+            vistos[c] += 1
+            nuevas_cols.append(f"{c}_{vistos[c]}")
+        else:
+            vistos[c] = 0
+            nuevas_cols.append(c)
+            
+    df.columns = nuevas_cols
     df = df.reset_index(drop=True)
     return df
 
@@ -147,11 +168,20 @@ try:
     col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
     
-    # Identificación de columnas de Llamadas
-    col_ll_rec = next((c for c in df.columns if "RECIBIDA" in c), None)
-    col_ll_cont = next((c for c in df.columns if "CONTESTADA" in c), None)
-    col_ll_aban = next((c for c in df.columns if "ABANDONADA" in c), None)
-    col_i_crea = next((c for c in df.columns if "CREADO" in c), None)
+    # Identificación MÚLTIPLE de columnas de Llamadas (Detecta C5 y CORCOL dinámicamente)
+    cols_ll_rec = [c for c in df.columns if "RECIBIDA" in c]
+    cols_ll_cont = [c for c in df.columns if "CONTESTADA" in c]
+    cols_ll_aban = [c for c in df.columns if "ABANDONADA" in c]
+    cols_i_crea = [c for c in df.columns if "CREADO" in c]
+    
+    col_rec_c5 = cols_ll_rec[0] if len(cols_ll_rec) > 0 else None
+    col_rec_corcol = cols_ll_rec[1] if len(cols_ll_rec) > 1 else None
+    col_cont_c5 = cols_ll_cont[0] if len(cols_ll_cont) > 0 else None
+    col_cont_corcol = cols_ll_cont[1] if len(cols_ll_cont) > 1 else None
+    col_aban_c5 = cols_ll_aban[0] if len(cols_ll_aban) > 0 else None
+    col_aban_corcol = cols_ll_aban[1] if len(cols_ll_aban) > 1 else None
+    col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
+    col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
     # ---------------------------------------------------------------------
     # FECHAS: Extracción estricta y blindada
@@ -195,13 +225,38 @@ try:
     if col_centro and centro_seleccionado != "TODOS":
         df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
 
-    # --- MÉTRICAS SUPERIORES DE LLAMADAS ---
-    if col_ll_rec:
-        t_rec = sum(df_llamadas[col_ll_rec].apply(limpiar_numeros_llamadas))
-        t_cont = sum(df_llamadas[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
-        t_aban = sum(df_llamadas[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
-        t_crea = sum(df_llamadas[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
+    # --- MÉTRICAS SUPERIORES DE LLAMADAS (SLA) ---
+    if len(cols_ll_rec) > 0:
+        st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
+        opcion_sla = st.radio(
+            "Centro SLA:",
+            ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        st.write("") # Espaciador
         
+        def sumar_col(col_name, df_datos):
+            if col_name and col_name in df_datos.columns:
+                return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
+            return 0
+
+        if "AMBOS" in opcion_sla:
+            t_rec = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
+            t_cont = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
+            t_aban = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
+            t_crea = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
+        elif "CON-C5" in opcion_sla:
+            t_rec = sumar_col(col_rec_c5, df_llamadas)
+            t_cont = sumar_col(col_cont_c5, df_llamadas)
+            t_aban = sumar_col(col_aban_c5, df_llamadas)
+            t_crea = sumar_col(col_crea_c5, df_llamadas)
+        elif "CORCOL" in opcion_sla:
+            t_rec = sumar_col(col_rec_corcol, df_llamadas)
+            t_cont = sumar_col(col_cont_corcol, df_llamadas)
+            t_aban = sumar_col(col_aban_corcol, df_llamadas)
+            t_crea = sumar_col(col_crea_corcol, df_llamadas)
+            
         pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
         
         st.markdown(f"""
@@ -377,7 +432,7 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
-        # --- TABLERO TÁCTICO DE CENTROS (NUEVO) ---
+        # --- TABLERO TÁCTICO DE CENTROS ---
         if col_centro:
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
