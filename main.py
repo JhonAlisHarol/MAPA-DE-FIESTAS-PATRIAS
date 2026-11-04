@@ -5,6 +5,7 @@ from folium.plugins import HeatMap, MarkerCluster, Fullscreen
 from streamlit_folium import st_folium
 import html
 import datetime
+import re  # NUEVO: Importado para el análisis de texto y conteo de delegaciones
 
 st.set_page_config(
     page_title="Centro de Operación Nacional | Mapa Táctico C5",
@@ -158,7 +159,7 @@ def limpiar_numeros_llamadas(val):
 try:
     df = cargar_datos_bitacora()
 
-    # Identificación blindada de columnas principales (se usa str(c) para evitar errores con columnas vacías)
+    # Identificación blindada de columnas principales
     col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
     col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
     col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
@@ -168,7 +169,7 @@ try:
     col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
     col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
     
-    # Identificación MÚLTIPLE de columnas de Llamadas (Detecta C5 y CORCOL dinámicamente)
+    # Identificación MÚLTIPLE de columnas de Llamadas
     cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
     cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
     cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
@@ -234,7 +235,7 @@ try:
             horizontal=True,
             label_visibility="collapsed"
         )
-        st.write("") # Espaciador
+        st.write("") 
         
         def sumar_col(col_name, df_datos):
             if col_name and col_name in df_datos.columns:
@@ -487,7 +488,101 @@ try:
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-        
+
+        # --- NUEVO: DELEGACIONES Y ACCIONES POLICIALES ---
+        if col_rep and col_zona:
+            # 1. Análisis de Delegaciones
+            st.markdown("""
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        🎖️ CANTIDAD DE DELEGACIONES POR PROVINCIA / ZONA
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            def extraer_delegaciones(texto):
+                if pd.isna(texto): return 0
+                texto_str = str(texto).lower()
+                # Buscar números previos a las palabras delegacion, delegaciones o bandas
+                match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+                if match:
+                    return int(match.group(1))
+                elif "delegacion" in texto_str or "banda" in texto_str:
+                    # Cuenta 1 como mínimo si detecta la palabra pero no el número exacto
+                    return 1
+                return 0
+                
+            df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
+            resumen_delegaciones = df_geo[df_geo['Cant_Delegaciones'] > 0].groupby(col_zona)['Cant_Delegaciones'].sum().reset_index()
+            resumen_delegaciones.columns = ['Provincia / Zona', 'Delegaciones']
+            
+            if not resumen_delegaciones.empty:
+                cols_del = st.columns(6) 
+                for idx, row in resumen_delegaciones.iterrows():
+                    col_idx = idx % 6
+                    with cols_del[col_idx]:
+                        st.markdown(f"""
+                        <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 100, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,100,0.1);">
+                            <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                                {row['Provincia / Zona']}
+                            </div>
+                            <div style="color: #00ff66; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(0,255,102,0.8);">
+                                {int(row['Delegaciones'])}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No se detectaron delegaciones ni bandas en los reportes filtrados.</p>", unsafe_allow_html=True)
+
+            # 2. Análisis de Acciones Policiales Relevantes
+            st.markdown("""
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        🚨 ACCIONES POLICIALES RELEVANTES
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            def contar_kw(texto, kws):
+                if pd.isna(texto): return 0
+                return 1 if any(k in str(texto).lower() for k in kws) else 0
+
+            tot_capturas = df_geo[col_rep].apply(lambda x: contar_kw(x, ['captura', 'aprehensi', 'deteni'])).sum()
+            tot_evacuaciones = df_geo[col_rep].apply(lambda x: contar_kw(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia'])).sum()
+            tot_decomisos = df_geo[col_rep].apply(lambda x: contar_kw(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga'])).sum()
+            tot_alteraciones = df_geo[col_rep].apply(lambda x: contar_kw(x, ['alteraci', 'riña', 'desorden', 'pleito'])).sum()
+            
+            c1, c2, c3, c4 = st.columns(4)
+            
+            with c1:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
+                    <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
+                    <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c3:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
+                    <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with c4:
+                st.markdown(f"""
+                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
+                    <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
     else:
         st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
         
