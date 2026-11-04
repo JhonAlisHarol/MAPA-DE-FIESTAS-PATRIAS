@@ -110,7 +110,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
+# --- CONEXIÓN A GOOGLE SHEETS (BLINDADA) ---
 @st.cache_data(ttl=45)
 def cargar_datos_bitacora():
     url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
@@ -157,7 +157,6 @@ try:
     df = cargar_datos_bitacora()
 
     if not df.empty:
-        # Identificación blindada de columnas
         col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
         col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
         col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
@@ -168,7 +167,6 @@ try:
         col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
         col_provincia = next((c for c in df.columns if "PROVINCIA" in str(c)), None)
         
-        # Identificación de Llamadas
         cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
         cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
         cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
@@ -183,7 +181,6 @@ try:
         col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
         col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
-        # FECHAS
         if col_dia:
             fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
             df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
@@ -210,7 +207,7 @@ try:
                 lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
                 centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-        # --- LÓGICA DE FILTRADO SEGURO ---
+        # --- LÓGICA DE FILTRADO ---
         df_base_fecha = df.copy()
         if col_dia and 'Fecha_dt' in df_base_fecha.columns:
             df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
@@ -501,22 +498,26 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- DICCIONARIO MAESTRO ---
-                dict_kws = {
-                    "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid', 'indocumentad', 'libar', 'livar', 'oficio', 'alteraci', 'riña', 'agresi', 'agred'],
-                    "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
-                    "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci', 'incautad', 'sustancia'],
-                    "Retención de Licor": ['licor', 'bebida', 'cerveza'],
-                    "Artículos Varios Decomisados": ['decomis', 'recuperaci', 'recuperad', 'retenci', 'retenid', 'mercancía', 'artículo', 'vario'],
-                    "Alteración del Orden y Convivencia": ['desorden', 'pleito', 'violencia', 'altercado', 'escándalo', 'convivencia'],
-                    "Desalojos y Control de Multitudes": ['desalojo', 'desalojad', 'multitud'],
-                    "Retención de Carnets (Salud)": ['carnet'],
-                    "Destrucción de Alimentos (MINSA)": ['destrucci', 'destruid', 'alimento', 'insalubre'],
-                    "Multas, Sanciones y Citaciones": ['multa', 'sancion', 'sancionad', 'citaci', 'citad', 'establecimiento', 'cierre']
-                }
+                # --- NUEVO: MOTOR DE LECTURA ESTRUCTURADO Y UNIFICADO ---
+                categorias_lista = [
+                    "Aprehendidos (Alteración/Riña/Agresión)",
+                    "Aprehendidos (Indocumentados)",
+                    "Aprehendidos (Libar Licor)",
+                    "Aprehendidos (Por Oficio)",
+                    "Otras Capturas y Conducciones",
+                    "Atenciones Médicas y Evacuaciones",
+                    "Decomiso de Armas o Drogas",
+                    "Retención de Licor",
+                    "Artículos Varios Decomisados / Recuperados",
+                    "Desalojos y Desórdenes (Multitudes)",
+                    "Retención de Carnets (Salud)",
+                    "Destrucción de Alimentos (MINSA)",
+                    "Multas, Sanciones y Citaciones"
+                ]
 
-                def extraer_cantidad_accion(texto, palabras_clave):
-                    if pd.isna(texto): return 0
+                def analizar_fila(texto):
+                    res = {c: 0 for c in categorias_lista}
+                    if pd.isna(texto): return pd.Series(res)
                     texto_str = str(texto).lower()
                     
                     texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
@@ -530,18 +531,49 @@ try:
                     texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
                     texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
                     
-                    total = 0
                     frases = re.split(r'[.;,\n]|\by\b', texto_str)
-                    patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
                     
                     for frase in frases:
-                        if re.search(patron_kws, frase):
-                            numeros = re.findall(r'\b(\d+)\b', frase)
-                            if numeros:
-                                total += sum(int(n) for n in numeros)
-                    return total
+                        numeros = re.findall(r'\b(\d+)\b', frase)
+                        cant = sum(int(n) for n in numeros) if numeros else 0
+                        if cant == 0:
+                            continue 
+                        
+                        # Orden estricto para evitar el doble conteo
+                        if re.search(r'\b(?:indocumentad|documento)\b', frase):
+                            res["Aprehendidos (Indocumentados)"] += cant
+                        elif re.search(r'\b(?:libar|livar)\b', frase):
+                            res["Aprehendidos (Libar Licor)"] += cant
+                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)\b', frase):
+                            res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
+                        elif re.search(r'\b(?:oficio)\b', frase):
+                            res["Aprehendidos (Por Oficio)"] += cant
+                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)\b', frase):
+                            res["Otras Capturas y Conducciones"] += cant
+                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)\b', frase):
+                            res["Atenciones Médicas y Evacuaciones"] += cant
+                        elif re.search(r'\b(?:carnet)\b', frase):
+                            res["Retención de Carnets (Salud)"] += cant
+                        elif re.search(r'\b(?:multa|sancion|sancionad|citaci|citad|establecimiento|cierre)\b', frase):
+                            res["Multas, Sanciones y Citaciones"] += cant
+                        elif re.search(r'\b(?:destrucci|destruid|alimento|insalubre)\b', frase):
+                            res["Destrucción de Alimentos (MINSA)"] += cant
+                        elif re.search(r'\b(?:licor|bebida|cerveza)\b', frase):
+                            res["Retención de Licor"] += cant
+                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)\b', frase):
+                            res["Decomiso de Armas o Drogas"] += cant
+                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)\b', frase):
+                            res["Artículos Varios Decomisados / Recuperados"] += cant
+                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)\b', frase):
+                            res["Desalojos y Desórdenes (Multitudes)"] += cant
+                            
+                    return pd.Series(res)
 
-                # --- KPIS SUPERIORES DE ACCIONES ---
+                # Procesamiento unificado fila por fila
+                df_kpi = df_geo[col_rep].apply(analizar_fila)
+                df_geo_procesado = pd.concat([df_geo, df_kpi], axis=1)
+
+                # --- KPIS SUPERIORES DE ACCIONES (SINCRONIZADOS MATEMÁTICAMENTE) ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -550,46 +582,46 @@ try:
                     </div>
                 """, unsafe_allow_html=True)
 
-                tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Capturas y Aprehensiones"])).sum()
-                tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Atenciones Médicas y Evacuaciones"])).sum()
-                tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Decomiso de Armas o Drogas"] + dict_kws["Retención de Licor"] + dict_kws["Artículos Varios Decomisados"])).sum()
-                tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Alteración del Orden y Convivencia"] + dict_kws["Desalojos y Control de Multitudes"])).sum()
-                tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Retención de Carnets (Salud)"] + dict_kws["Destrucción de Alimentos (MINSA)"] + dict_kws["Multas, Sanciones y Citaciones"])).sum()
+                tot_capturas = df_kpi["Aprehendidos (Alteración/Riña/Agresión)"].sum() + df_kpi["Aprehendidos (Indocumentados)"].sum() + df_kpi["Aprehendidos (Libar Licor)"].sum() + df_kpi["Aprehendidos (Por Oficio)"].sum() + df_kpi["Otras Capturas y Conducciones"].sum()
+                tot_evacuaciones = df_kpi["Atenciones Médicas y Evacuaciones"].sum()
+                tot_decomisos = df_kpi["Decomiso de Armas o Drogas"].sum() + df_kpi["Retención de Licor"].sum() + df_kpi["Artículos Varios Decomisados / Recuperados"].sum()
+                tot_alteraciones = df_kpi["Desalojos y Desórdenes (Multitudes)"].sum()
+                tot_faltas = df_kpi["Retención de Carnets (Salud)"].sum() + df_kpi["Destrucción de Alimentos (MINSA)"].sum() + df_kpi["Multas, Sanciones y Citaciones"].sum()
                 
                 c1, c2, c3, c4, c5 = st.columns(5)
                 with c1:
                     st.markdown(f"""
                     <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
-                        <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
+                        <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{int(tot_capturas)}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with c2:
                     st.markdown(f"""
                     <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
-                        <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
+                        <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{int(tot_evacuaciones)}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with c3:
                     st.markdown(f"""
                     <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
-                        <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
+                        <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{int(tot_decomisos)}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with c4:
                     st.markdown(f"""
                     <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
-                        <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
+                        <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{int(tot_alteraciones)}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 with c5:
                     st.markdown(f"""
                     <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
                         <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
-                        <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
+                        <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{int(tot_faltas)}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -601,15 +633,11 @@ try:
                         </h3>
                     </div>
                 """, unsafe_allow_html=True)
-
-                df_kpi = df_geo.copy()
-                for nombre_cat, palabras in dict_kws.items():
-                    df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
                 
-                resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
+                resumen_acciones = df_geo_procesado.groupby(col_grupo_prov)[categorias_lista].sum()
                 
                 if not resumen_acciones.empty:
-                    # Ocultar provincias vacías y filas de acciones en 0
+                    # Limpiar provincias y categorías vacías
                     resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
                     resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
                     
@@ -617,7 +645,10 @@ try:
                     resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
                     
                     if not resumen_acciones_t.empty:
-                        # Fila de TOTAL GENERAL
+                        # Ordenar por el mayor impacto
+                        resumen_acciones_t = resumen_acciones_t.sort_values(by='Total General', ascending=False)
+                        
+                        # Fila de TOTAL GENERAL en el FONDO de la tabla
                         totales_columnas = resumen_acciones_t.sum(axis=0)
                         totales_columnas.name = 'TOTAL GENERAL'
                         resumen_acciones_t = pd.concat([resumen_acciones_t, pd.DataFrame(totales_columnas).T])
