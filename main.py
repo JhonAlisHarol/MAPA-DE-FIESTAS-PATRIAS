@@ -110,7 +110,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS (BLINDADA) ---
+# --- CONEXIÓN A GOOGLE SHEETS ---
 @st.cache_data(ttl=45)
 def cargar_datos_bitacora():
     url_csv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuFSvR6xnmXiAz4JRGVfrIDHdPVRV2fKM4jkPNKhW_Y-cRLlbJOI_O0SYZNDu6puEaYqcZd4hDWh20/pub?output=csv&gid=1525160468"
@@ -498,7 +498,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- NUEVO: MOTOR DE LECTURA ESTRUCTURADO Y UNIFICADO ---
+                # --- NUEVO: MOTOR DE LECTURA SIN LÍMITES ESTRICTOS (\b AL FINAL) ---
                 categorias_lista = [
                     "Aprehendidos (Alteración/Riña/Agresión)",
                     "Aprehendidos (Indocumentados)",
@@ -520,9 +520,11 @@ try:
                     if pd.isna(texto): return pd.Series(res)
                     texto_str = str(texto).lower()
                     
+                    # Eliminar edades y horas para no sumar "9 años" o "20 hrs"
                     texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
                     texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
                     
+                    # Traducir letras a números
                     texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
                     texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
                     texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
@@ -539,32 +541,32 @@ try:
                         if cant == 0:
                             continue 
                         
-                        # Orden estricto para evitar el doble conteo
-                        if re.search(r'\b(?:indocumentad|documento)\b', frase):
+                        # MATCH POR RAÍZ (SIN \b al final) PARA CAPTURAR PLURALES (ej. aprehendido, multas)
+                        if re.search(r'\b(?:indocumentad|documento)', frase):
                             res["Aprehendidos (Indocumentados)"] += cant
-                        elif re.search(r'\b(?:libar|livar)\b', frase):
+                        elif re.search(r'\b(?:libar|livar)', frase):
                             res["Aprehendidos (Libar Licor)"] += cant
-                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)\b', frase):
+                        elif re.search(r'\b(?:alteraci|riña|agresi|agred)', frase):
                             res["Aprehendidos (Alteración/Riña/Agresión)"] += cant
-                        elif re.search(r'\b(?:oficio)\b', frase):
+                        elif re.search(r'\b(?:oficio)', frase):
                             res["Aprehendidos (Por Oficio)"] += cant
-                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)\b', frase):
+                        elif re.search(r'\b(?:captur|aprehend|aprehens|deteni|deten|conducci|conducid)', frase):
                             res["Otras Capturas y Conducciones"] += cant
-                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)\b', frase):
+                        elif re.search(r'\b(?:evacuaci|evacuad|traslado|traslad|rescate|rescat|ambulancia|paramédic|atendid|atenci|desmay|golpe de calor)', frase):
                             res["Atenciones Médicas y Evacuaciones"] += cant
-                        elif re.search(r'\b(?:carnet)\b', frase):
+                        elif re.search(r'\b(?:carnet)', frase):
                             res["Retención de Carnets (Salud)"] += cant
-                        elif re.search(r'\b(?:multa|sancion|sancionad|citaci|citad|establecimiento|cierre)\b', frase):
+                        elif re.search(r'\b(?:multa|sancion|citaci|citad|establecimiento|cierre)', frase):
                             res["Multas, Sanciones y Citaciones"] += cant
-                        elif re.search(r'\b(?:destrucci|destruid|alimento|insalubre)\b', frase):
+                        elif re.search(r'\b(?:destrucci|destruid|insalubre)', frase): # Removido "alimento" para evitar conflicto con citaciones
                             res["Destrucción de Alimentos (MINSA)"] += cant
-                        elif re.search(r'\b(?:licor|bebida|cerveza)\b', frase):
+                        elif re.search(r'\b(?:licor|bebida|cerveza)', frase):
                             res["Retención de Licor"] += cant
-                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)\b', frase):
+                        elif re.search(r'\b(?:arma|droga|incautaci|incautad|sustancia)', frase):
                             res["Decomiso de Armas o Drogas"] += cant
-                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)\b', frase):
+                        elif re.search(r'\b(?:decomis|recuperaci|recuperad|retenci|retenid|mercancía|artículo|vario)', frase):
                             res["Artículos Varios Decomisados / Recuperados"] += cant
-                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)\b', frase):
+                        elif re.search(r'\b(?:desalojo|desalojad|multitud|desorden|pleito|violencia|altercado|escándalo|convivencia)', frase):
                             res["Desalojos y Desórdenes (Multitudes)"] += cant
                             
                     return pd.Series(res)
@@ -645,7 +647,6 @@ try:
                     resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
                     
                     if not resumen_acciones_t.empty:
-                        # Ordenar por el mayor impacto
                         resumen_acciones_t = resumen_acciones_t.sort_values(by='Total General', ascending=False)
                         
                         # Fila de TOTAL GENERAL en el FONDO de la tabla
