@@ -158,21 +158,21 @@ def limpiar_numeros_llamadas(val):
 try:
     df = cargar_datos_bitacora()
 
-    # Identificación de columnas principales
-    col_lat = next((c for c in df.columns if "LAT" in c), None)
-    col_lon = next((c for c in df.columns if "LON" in c or "LNG" in c), None)
-    col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
-    col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
-    col_hora = next((c for c in df.columns if "HORA" in c), None)
-    col_zona = next((c for c in df.columns if "ZONA" in c or "SERVICIO" in c), None)
-    col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
-    col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
+    # Identificación blindada de columnas principales (se usa str(c) para evitar errores con columnas vacías)
+    col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
+    col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
+    col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
+    col_dia = next((c for c in df.columns if "DIA" in str(c) or "FECHA" in str(c)), None)
+    col_hora = next((c for c in df.columns if "HORA" in str(c)), None)
+    col_zona = next((c for c in df.columns if "ZONA" in str(c) or "SERVICIO" in str(c)), None)
+    col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
+    col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
     
     # Identificación MÚLTIPLE de columnas de Llamadas (Detecta C5 y CORCOL dinámicamente)
-    cols_ll_rec = [c for c in df.columns if "RECIBIDA" in c]
-    cols_ll_cont = [c for c in df.columns if "CONTESTADA" in c]
-    cols_ll_aban = [c for c in df.columns if "ABANDONADA" in c]
-    cols_i_crea = [c for c in df.columns if "CREADO" in c]
+    cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
+    cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
+    cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
+    cols_i_crea = [c for c in df.columns if "CREADO" in str(c)]
     
     col_rec_c5 = cols_ll_rec[0] if len(cols_ll_rec) > 0 else None
     col_rec_corcol = cols_ll_rec[1] if len(cols_ll_rec) > 1 else None
