@@ -684,52 +684,50 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Construir elementos de acciones clave SOLO si son mayores a 0, evitando bloques vacíos o mal cerrados
-                    acciones_html = ""
-                    if c_cap > 0:
-                        acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
-                    if c_med > 0:
-                        acciones_html += f"<li>Evacuaciones / Médicas: <b style='color:#00ff66;'>{c_med}</b></li>"
-                    if c_dec > 0:
-                        acciones_html += f"<li>Decomisos / Recuperaciones: <b style='color:#ffae00;'>{c_dec}</b></li>"
-                    if c_alt > 0:
-                        acciones_html += f"<li>Alteración del Orden: <b style='color:#bd00ff;'>{c_alt}</b></li>"
-                    if c_fal > 0:
-                        acciones_html += f"<li>Faltas Adm. / MINSA: <b style='color:#00c8ff;'>{c_fal}</b></li>"
-                    
-                    if acciones_html:
-                        seccion_acciones = f"""
-                        <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
-                        <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
-                            {acciones_html}
-                        </ul>
-                        """
-                    else:
-                        seccion_acciones = """
-                        <div style="margin-top: 6px; font-weight: bold; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-style: italic;">
-                            Sin acciones clave registradas
-                        </div>
-                        """
-
+                    # Renderizado limpio usando elementos de Streamlit nativos en lugar de bloques HTML anidados con fallos
                     with cols_tarjetas[col_idx]:
-                        st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
-                            <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                🛡️ PROVINCIA: {provincia_nombre.upper()}
-                            </div>
-                            <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
-                                    <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
-                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                        with st.container():
+                            st.markdown(f"""
+                            <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
+                                <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
+                                    🛡️ PROVINCIA: {provincia_nombre.upper()}
                                 </div>
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
-                                    <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
-                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
+                                        <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
+                                        <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
+                                        <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
+                                        <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                    </div>
+                                    <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
                                 </div>
-                                {seccion_acciones}
                             </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                            """, unsafe_allow_html=True)
+                            
+                            # Mostrar únicamente las acciones clave con valores activos (sin ceros ni texto residual)
+                            hay_acciones = False
+                            if c_cap > 0:
+                                st.markdown(f"<span style='color:#ff3333; font-size:12px;'>• Capturas / Aprehensiones: <b>{c_cap}</b></span>", unsafe_allow_html=True)
+                                hay_acciones = True
+                            if c_med > 0:
+                                st.markdown(f"<span style='color:#00ff66; font-size:12px;'>• Evacuaciones / Médicas: <b>{c_med}</b></span>", unsafe_allow_html=True)
+                                hay_acciones = True
+                            if c_dec > 0:
+                                st.markdown(f"<span style='color:#ffae00; font-size:12px;'>• Decomisos / Recuperaciones: <b>{c_dec}</b></span>", unsafe_allow_html=True)
+                                hay_acciones = True
+                            if c_alt > 0:
+                                st.markdown(f"<span style='color:#bd00ff; font-size:12px;'>• Alteración del Orden: <b>{c_alt}</b></span>", unsafe_allow_html=True)
+                                hay_acciones = True
+                            if c_fal > 0:
+                                st.markdown(f"<span style='color:#00c8ff; font-size:12px;'>• Faltas Adm. / MINSA: <b>{c_fal}</b></span>", unsafe_allow_html=True)
+                                hay_acciones = True
+                                
+                            if not hay_acciones:
+                                st.markdown("<span style='color:#94a3b8; font-size:12px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</span>", unsafe_allow_html=True)
+                            
+                            st.markdown("<br>", unsafe_allow_html=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
