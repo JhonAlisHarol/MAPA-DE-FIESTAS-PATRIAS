@@ -501,7 +501,7 @@ try:
                 else:
                     st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-                # --- DICCIONARIO MAESTRO (LIMPIADO Y CORREGIDO) ---
+                # --- DICCIONARIO MAESTRO ---
                 dict_kws = {
                     "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid', 'indocumentad', 'libar', 'livar', 'oficio', 'alteraci', 'riña', 'agresi', 'agred'],
                     "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
@@ -537,7 +537,6 @@ try:
                     for frase in frases:
                         if re.search(patron_kws, frase):
                             numeros = re.findall(r'\b(\d+)\b', frase)
-                            # CORRECCIÓN: SOLO SUMA SI HAY UN NÚMERO EXPLÍCITO. (Se eliminó el "else: total += 1")
                             if numeros:
                                 total += int(numeros[0])
                     return total
@@ -594,7 +593,7 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (BLINDADO) ---
+                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -610,7 +609,7 @@ try:
                 resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
                 
                 if not resumen_acciones.empty:
-                    # Ocultar provincias vacías y filas de acciones en 0
+                    # Limpiar provincias y categorías vacías
                     resumen_acciones = resumen_acciones.loc[:, (resumen_acciones != 0).any(axis=0)]
                     resumen_acciones = resumen_acciones.loc[(resumen_acciones != 0).any(axis=1)]
                     
@@ -618,6 +617,11 @@ try:
                     resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
                     
                     if not resumen_acciones_t.empty:
+                        # --- NUEVO: FILA DE TOTAL GENERAL EN LA PARTE INFERIOR ---
+                        totales_columnas = resumen_acciones_t.sum(axis=0)
+                        totales_columnas.name = 'TOTAL GENERAL'
+                        resumen_acciones_t = pd.concat([resumen_acciones_t, pd.DataFrame(totales_columnas).T])
+                        
                         resumen_acciones_t = resumen_acciones_t.reset_index()
                         resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
                         
