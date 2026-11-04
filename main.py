@@ -232,10 +232,8 @@ try:
         else:
             df_geo = pd.DataFrame()
 
-        # Variable global de provincia
         col_grupo_prov = col_provincia if col_provincia else col_zona
 
-        # Contador en barra lateral
         with st.sidebar:
             st.markdown("---")
             st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
@@ -614,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA TÉCNICO REGIONAL DE FONDO)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA ESTILIZADO CON TARJETAS LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -623,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Distribución territorial de eventos, delegaciones y acciones clave (sin valores en cero).
+                        Vista ejecutiva territorial. Se muestran únicamente las acciones clave con valores activos por provincia.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -669,9 +667,9 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO ---
+                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO (BANDERA DE PANAMÁ ESTILIZADA) ---
                 st.markdown("""
-                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.85), rgba(11, 15, 25, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #1b365d; border-radius: 16px; padding: 25px; box-shadow: inset 0 0 30px rgba(0,0,0,0.8);">
+                <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(11, 15, 25, 0.95), rgba(27, 54, 93, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 25px rgba(0,255,255,0.3);">
                 """, unsafe_allow_html=True)
 
                 cols_tarjetas = st.columns(3)
@@ -686,6 +684,7 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
+                    # Construir lista de acciones clave FILTRANDO ESTRICTAMENTE LOS CEROS
                     acciones_html = ""
                     if c_cap > 0:
                         acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
@@ -698,8 +697,15 @@ try:
                     if c_fal > 0:
                         acciones_html += f"<li>Faltas Adm. / MINSA: <b style='color:#00c8ff;'>{c_fal}</b></li>"
                     
-                    if not acciones_html:
-                        acciones_html = "<li style='color:#94a3b8; font-style:italic;'>Sin acciones clave registradas</li>"
+                    # Si no hay acciones clave con valor > 0, ocultamos completamente la sección de acciones clave para no saturar
+                    seccion_acciones = ""
+                    if acciones_html:
+                        seccion_acciones = f"""
+                        <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
+                        <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
+                            {acciones_html}
+                        </ul>
+                        """
 
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
@@ -716,10 +722,7 @@ try:
                                     <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
                                     <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
                                 </div>
-                                <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
-                                <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
-                                    {acciones_html}
-                                </ul>
+                                {seccion_acciones}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
