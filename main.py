@@ -519,7 +519,6 @@ try:
                 total = 0
                 frases = re.split(r'[.;,\n]|\by\b', texto_str)
                 
-                # REPARACIÓN DE FALSOS POSITIVOS CON LÍMITE DE PALABRA ESTRICTO (\b)
                 patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
                 
                 for frase in frases:
@@ -576,16 +575,15 @@ try:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE DETALLADO ---
+            # --- NUEVO: CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
             st.markdown("""
                 <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        📋 DESGLOSE DETALLADO DE ACCIONES POLICIALES Y ADM.
+                        📋 DESGLOSE DETALLADO DE ACCIONES POR PROVINCIA
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
 
-            # Categorías para el cuadro detallado (El motor se encarga de usar los límites de palabra \b)
             categorias_desglose = {
                 "Capturas y Aprehensiones": ['captura', 'aprehensi', 'deteni', 'conducci'],
                 "Atenciones Médicas y Evacuaciones": ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic', 'atendid', 'atenci'],
@@ -598,27 +596,45 @@ try:
                 "Destrucción de Alimentos (MINSA)": ['destrucci'],
                 "Multas, Sanciones y Citaciones": ['multa', 'sancionad', 'citaci', 'citado', 'establecimiento']
             }
-
-            datos_tabla = []
+            
+            # Crear un dataframe temporal calculando todas las categorías por cada fila
+            df_kpi = df_geo.copy()
             for nombre_cat, palabras in categorias_desglose.items():
-                total_cat = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras)).sum()
-                if total_cat > 0:  # Si está en cero, se oculta automáticamente
-                    datos_tabla.append({"Acción / Incidente": nombre_cat, "Total Registrado": int(total_cat)})
-
-            if datos_tabla:
-                df_desglose = pd.DataFrame(datos_tabla)
+                df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
+            
+            # Agrupar por la provincia y sumar
+            resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(categorias_desglose.keys())].sum()
+            
+            # Transponer para que las acciones sean las filas y las provincias las columnas
+            resumen_acciones_t = resumen_acciones.T
+            
+            # Sumar el Total General
+            resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
+            
+            # Filtrar filas que estén en cero para mantener el panel limpio
+            resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
+            
+            # Formatear la tabla final
+            resumen_acciones_t = resumen_acciones_t.reset_index()
+            resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
+            
+            if not resumen_acciones_t.empty:
+                df_desglose = resumen_acciones_t
                 
-                col_izq, col_der = st.columns([3, 1])
+                # Convertir todo a números enteros menos la primera columna
+                for col in df_desglose.columns:
+                    if col != 'Acción / Incidente':
+                        df_desglose[col] = df_desglose[col].astype(int)
+                
+                col_izq, col_der = st.columns([4, 1])
                 with col_izq:
-                    # Cuadro interactivo tipo Excel
                     st.dataframe(df_desglose, use_container_width=True, hide_index=True)
                 with col_der:
-                    # Botón para descargar a Excel/CSV
                     csv = df_desglose.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="📥 Descargar Cuadro en Excel/CSV",
+                        label="📥 Descargar Cuadro",
                         data=csv,
-                        file_name='Desglose_Acciones_Tacticas.csv',
+                        file_name='Desglose_Provincial.csv',
                         mime='text/csv',
                     )
             else:
