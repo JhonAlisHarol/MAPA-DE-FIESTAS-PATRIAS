@@ -158,6 +158,7 @@ def limpiar_numeros_llamadas(val):
 try:
     df = cargar_datos_bitacora()
 
+    # Identificación blindada de columnas principales
     col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
     col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
     col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
@@ -167,6 +168,10 @@ try:
     col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
     col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
     
+    # NUEVO: Detección automática de columna PROVINCIA
+    col_provincia = next((c for c in df.columns if "PROVINCIA" in str(c)), None)
+    
+    # Identificación MÚLTIPLE de columnas de Llamadas
     cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
     cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
     cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
@@ -486,12 +491,15 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-        # --- NUEVO: DELEGACIONES Y EVENTOS ---
-        if col_rep and col_zona:
+        # --- NUEVO: DELEGACIONES Y EVENTOS (AHORA CON PROVINCIA LIMPIA) ---
+        # Se agrupa prioritariamente por PROVINCIA si existe, de lo contrario por ZONA.
+        col_grupo_prov = col_provincia if col_provincia else col_zona
+        
+        if col_rep and col_grupo_prov:
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🎖️ RESUMEN DE EVENTOS Y DELEGACIONES POR PROVINCIA / ZONA
+                        🎖️ RESUMEN DE EVENTOS Y DELEGACIONES POR PROVINCIA
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
@@ -508,8 +516,8 @@ try:
                 
             df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
             
-            resumen_prov = df_geo.groupby(col_zona).agg(
-                Total_Eventos=(col_zona, 'count'),
+            resumen_prov = df_geo.groupby(col_grupo_prov).agg(
+                Total_Eventos=(col_grupo_prov, 'count'),
                 Total_Delegaciones=('Cant_Delegaciones', 'sum')
             ).reset_index()
             resumen_prov.columns = ['Provincia', 'Total_Eventos', 'Total_Delegaciones']
