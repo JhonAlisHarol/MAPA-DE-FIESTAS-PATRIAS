@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS VISUALES Y FONDO TÁCTICO LIGERO ---
+# --- ESTILOS VISUALES Y FONDO TÁCTICO DE LA BANDERA ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -22,13 +22,17 @@ st.markdown("""
     div[data-testid="stToolbar"] {display: none !important;}
     button[kind="header"] {display: none !important;}
     
+    /* Fondo con la Bandera de Panamá y cristal oscuro táctico para legibilidad */
     .bg-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: radial-gradient(circle at center, #1b365d 0%, #0b0f19 80%);
+        background-image: linear-gradient(rgba(11, 15, 25, 0.85), rgba(11, 15, 25, 0.85)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         z-index: -99998;
         pointer-events: none;
     }
@@ -38,9 +42,14 @@ st.markdown("""
         color: #ffffff;
     }
     
+    /* Panel Lateral Transparente (Cristal Ahumado) para ver la bandera */
     [data-testid="stSidebar"] {
-        background-color: rgba(11, 15, 25, 0.95) !important;
-        border-right: 1px solid #1b365d;
+        background-color: rgba(10, 10, 15, 0.35) !important;
+        border-right: 3px solid transparent;
+        border-image: linear-gradient(to bottom, #0000FF, #FFFFFF, #FF0000) 1;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: transparent !important;
     }
     
     @keyframes neonBorderMove {
@@ -49,36 +58,40 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
+    /* Borde Patriótico con los 3 colores puros resaltados y brillando */
     .neon-title-container {
         border: 4px solid transparent;
         background: linear-gradient(135deg, rgba(16, 24, 40, 0.9) 0%, rgba(11, 15, 25, 0.9) 100%), 
-                    linear-gradient(90deg, #ff0055, #00ffff, #00ff66, #ffae00, #bd00ff, #ff0055);
+                    linear-gradient(90deg, #0000FF 10%, #FFFFFF 50%, #FF0000 90%);
         background-origin: border-box;
         background-clip: padding-box, border-box;
-        background-size: 300% 300%;
+        background-size: 200% 200%;
         animation: neonBorderMove 6s ease infinite;
         border-radius: 14px;
         padding: 20px;
         text-align: center;
-        box-shadow: 0 0 25px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(255, 0, 85, 0.3);
+        box-shadow: -15px 0 25px rgba(0, 0, 255, 0.6), 0 0 25px rgba(255, 255, 255, 0.5), 15px 0 25px rgba(255, 0, 0, 0.6);
         margin-bottom: 20px;
     }
     
+    /* Título con gradiente patriótico y blanco intenso en medio */
     .neon-title-text {
-        color: #00ffff;
-        font-size: 26px;
-        font-weight: 800;
+        font-size: 28px;
+        font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         letter-spacing: 1.5px;
-        text-shadow: 0 0 15px rgba(0, 255, 255, 0.9), 0 0 25px rgba(255, 0, 85, 0.6);
+        background: linear-gradient(90deg, #6699FF 20%, #FFFFFF 50%, #FF6666 80%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
     }
     
     .neon-sub-text {
-        color: #ffae00;
+        color: #e2e8f0;
         font-size: 13px;
         font-style: italic;
         margin-top: 8px;
-        text-shadow: 0 0 10px rgba(255, 174, 0, 0.8);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     }
     </style>
     <div class="bg-overlay"></div>
@@ -131,16 +144,15 @@ try:
     else:
         df_geo = pd.DataFrame()
 
-    # Identificación de columnas 
+    # Identificación de columnas descriptivas
     col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
     col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
     col_hora = next((c for c in df.columns if "HORA" in c), None)
     col_zona = next((c for c in df.columns if "ZONA" in c or "SERVICIO" in c), None)
     col_centro = next((c for c in df.columns if "CENTRO" in c or "LUGAR" in c), None)
     col_rep = next((c for c in df.columns if "REPORTE" in c or "INCIDENTE" in c or "DETALLE" in c), None)
-    col_img = next((c for c in df.columns if any(x in c for x in ["IMAGEN", "EVIDENCIA", "FOTO", "URL", "IMG", "ADJUNTO", "LINK"])), None)
 
-    # Convertir fechas al formato correcto para los filtros
+    # Convertir fechas para el filtro
     if col_dia and not df_geo.empty:
         df_geo['Fecha_dt'] = pd.to_datetime(df_geo[col_dia], dayfirst=True, errors='coerce')
 
@@ -154,7 +166,6 @@ try:
             
         st.markdown("---")
         
-        # Filtro 1: Rango de Fechas (Por defecto Noviembre del año actual)
         st.markdown("#### 📅 Fecha de Reporte")
         hoy = datetime.date.today()
         rango_fechas = st.date_input(
@@ -163,30 +174,26 @@ try:
             format="DD/MM/YYYY"
         )
         
-        # Filtro 2: Centros
         centro_seleccionado = "TODOS"
         if col_centro and not df_geo.empty:
             st.markdown("#### 🏢 Centro / Ubicación")
             lista_centros = ["TODOS"] + sorted([str(x) for x in df_geo[col_centro].dropna().unique() if str(x).strip() != ""])
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # --- APLICACIÓN DE LOS FILTROS AL DATAFRAME ---
-    # Filtrar por fecha
+    # Aplicar filtros
     if col_dia and 'Fecha_dt' in df_geo.columns:
         if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
             fecha_inicio, fecha_fin = rango_fechas
             df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
             
-    # Filtrar por Centro
     if col_centro and centro_seleccionado != "TODOS":
         df_geo = df_geo[df_geo[col_centro].astype(str) == centro_seleccionado]
 
-    # --- MOSTRAR CONTADOR ACTUALIZADO EN EL PANEL ---
     with st.sidebar:
         st.markdown("---")
         st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
 
-    # --- SELECTOR DE CAPAS ---
+    # --- MAPA ---
     modo_mapa = st.radio(
         "Capa de Visualización Táctica:",
         ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
@@ -209,36 +216,44 @@ try:
 
         Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-        # Función para crear el popup táctico
         def generar_popup_html(row, idx):
-            num_ev = str(row.get(col_num, idx + 1)).replace(".0", "")
-            if len(num_ev) > 15:
-                num_ev = str(idx + 1)
-                
-            dia_ev = str(row.get(col_dia, 'N/A')) if col_dia else 'N/A'
-            hora_ev = str(row.get(col_hora, 'N/A')) if col_hora else 'N/A'
-            zona_ev = str(row.get(col_zona, 'N/A')) if col_zona else 'N/A'
-            centro_ev = str(row.get(col_centro, 'N/A')) if col_centro else 'N/A'
+            num_ev_raw = str(row[col_num]).replace(".0", "") if col_num and pd.notna(row[col_num]) else str(idx + 1)
+            num_ev = num_ev_raw if len(num_ev_raw) <= 15 else str(idx + 1)
             
-            raw_rep = str(row.get(col_rep, 'Sin detalle registrado')) if col_rep else 'Sin detalle registrado'
+            dia_ev = str(row[col_dia]) if col_dia and pd.notna(row[col_dia]) else 'N/A'
+            hora_ev = str(row[col_hora]) if col_hora and pd.notna(row[col_hora]) else 'N/A'
+            zona_ev = str(row[col_zona]) if col_zona and pd.notna(row[col_zona]) else 'N/A'
+            centro_ev = str(row[col_centro]) if col_centro and pd.notna(row[col_centro]) else 'N/A'
+            raw_rep = str(row[col_rep]) if col_rep and pd.notna(row[col_rep]) else 'Sin detalle registrado'
+            
             rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
 
-            url_img = str(row.get(col_img, "")).strip() if col_img else ""
+            # ESCÁNER UNIVERSAL DE IMÁGENES
+            url_img = ""
+            for val in row.values:
+                val_str = str(val).strip()
+                if "http" in val_str and ("drive.google.com" in val_str or ".jpg" in val_str or ".png" in val_str):
+                    url_img = val_str
+                    break
+                elif "drive.google.com" in val_str:
+                    url_img = "https://" + val_str
+                    break
+
             html_foto = ""
             
-            if url_img and url_img.lower() != "nan" and url_img.startswith("http"):
+            if url_img:
                 url_mostrar = url_img 
+                id_foto = ""
                 
-                if "drive.google.com/file/d/" in url_img:
+                if "drive.google.com" in url_img:
                     try:
-                        id_foto = url_img.split("/file/d/")[1].split("/")[0]
-                        url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w500"
-                    except:
-                        pass
-                elif "drive.google.com/open?id=" in url_img:
-                    try:
-                        id_foto = url_img.split("id=")[1].split("&")[0]
-                        url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w500"
+                        if "/d/" in url_img:
+                            id_foto = url_img.split("/d/")[1].split("/")[0]
+                        elif "id=" in url_img:
+                            id_foto = url_img.split("id=")[1].split("&")[0]
+                        
+                        if id_foto:
+                            url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
                     except:
                         pass
 
@@ -248,7 +263,7 @@ try:
                         📸 Abrir Evidencia Original
                     </a>
                     <a href="{url_img}" target="_blank">
-                        <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia (Clic para ver original)">
+                        <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
                     </a>
                 </div>
                 """
@@ -268,21 +283,11 @@ try:
                     {html_foto}
                 </div>
             </div>
-            """, num_ev
+            """
 
-        # --- CAPA 2: MAPA DE CALOR ---
         if "Calor" in modo_mapa:
             heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
-            HeatMap(
-                heat_data,
-                min_opacity=0.45,
-                max_zoom=14,
-                radius=18,
-                blur=22,
-                gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}
-            ).add_to(m)
-
-        # --- CAPAS 1 y 3: CLUSTER O INDIVIDUALES ---
+            HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
         else:
             es_cluster = "Cluster" in modo_mapa
             if es_cluster:
@@ -291,9 +296,8 @@ try:
                 grupo_marcadores = m
 
             for idx, row in df_geo.iterrows():
-                popup_content, id_num = generar_popup_html(row, idx)
+                popup_content = generar_popup_html(row, idx)
 
-                # ICONO TÁCTICO DE FIESTAS PATRIAS (Bandera de Panamá en imagen)
                 icono_patrio = folium.DivIcon(
                     html=f"""
                     <div style="
@@ -316,8 +320,7 @@ try:
                 folium.Marker(
                     location=[row['Lat_clean'], row['Lon_clean']],
                     icon=icono_patrio, 
-                    popup=folium.Popup(popup_content, max_width=320, show=False),
-                    tooltip=f"Caso N° {id_num}: Clic para ver reporte"
+                    popup=folium.Popup(popup_content, max_width=320, show=False)
                 ).add_to(grupo_marcadores)
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
