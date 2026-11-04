@@ -614,7 +614,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (TARJETAS TÉCNICAS ESTILO MAPA)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (TARJETAS TÉCNICAS SIN CEROS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -623,7 +623,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | RESUMEN REGIONAL POR PROVINCIA ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Distribución técnica estática de eventos, delegaciones y las 5 acciones clave por provincia.
+                        Distribución técnica por provincia. Se omiten los valores en cero para optimizar la lectura ejecutiva.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -645,7 +645,6 @@ try:
                 df_pres_kpi = df_pres[col_rep].apply(analizar_fila)
                 df_pres_full = pd.concat([df_pres, df_pres_kpi], axis=1)
                 
-                # Agrupamos por provincia y sumamos cada una de las 5 acciones clave exactas
                 agrupado_prov = df_pres_full.groupby(col_grupo_prov).agg(
                     Total_Eventos=(col_grupo_prov, 'count'),
                     Total_Delegaciones=('Cant_Del', 'sum'),
@@ -670,7 +669,6 @@ try:
                     )
                 ).reset_index()
 
-                # Mostrar en cuadrícula de 3 columnas (idéntico al diseño de tarjetas solicitado)
                 cols_tarjetas = st.columns(3)
                 for index, row in agrupado_prov.iterrows():
                     col_idx = index % 3
@@ -682,6 +680,22 @@ try:
                     c_dec = int(row['Decomisos_Totales'])
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
+
+                    # Construir elementos de acciones clave solo si son mayores a 0
+                    acciones_html = ""
+                    if c_cap > 0:
+                        acciones_html += f"<li>Capturas / Aprehensiones: <b style='color:#ff3333;'>{c_cap}</b></li>"
+                    if c_med > 0:
+                        acciones_html += f"<li>Evacuaciones / Médicas: <b style='color:#00ff66;'>{c_med}</b></li>"
+                    if c_dec > 0:
+                        acciones_html += f"<li>Decomisos / Recuperaciones: <b style='color:#ffae00;'>{c_dec}</b></li>"
+                    if c_alt > 0:
+                        acciones_html += f"<li>Alteración del Orden: <b style='color:#bd00ff;'>{c_alt}</b></li>"
+                    if c_fal > 0:
+                        acciones_html += f"<li>Faltas Adm. / MINSA: <b style='color:#00c8ff;'>{c_fal}</b></li>"
+                    
+                    if not acciones_html:
+                        acciones_html = "<li style='color:#94a3b8; font-style:italic;'>Sin acciones clave registradas</li>"
 
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
@@ -700,11 +714,7 @@ try:
                                 </div>
                                 <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
                                 <ul style="margin: 4px 0 0 0; padding-left: 18px; color: #cbd5e0; font-size: 12px; line-height: 1.6;">
-                                    <li>Capturas / Aprehensiones: <b style="color:#ff3333;">{c_cap}</b></li>
-                                    <li>Evacuaciones / Médicas: <b style="color:#00ff66;">{c_med}</b></li>
-                                    <li>Decomisos / Recuperaciones: <b style="color:#ffae00;">{c_dec}</b></li>
-                                    <li>Alteración del Orden: <b style="color:#bd00ff;">{c_alt}</b></li>
-                                    <li>Faltas Adm. / MINSA: <b style="color:#00c8ff;">{c_fal}</b></li>
+                                    {acciones_html}
                                 </ul>
                             </div>
                         </div>
