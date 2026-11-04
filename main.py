@@ -324,7 +324,7 @@ try:
                 folium.Marker(
                     location=[row['Lat_clean'], row['Lon_clean']],
                     icon=icono_patrio, 
-                    popup=folium.Popup(popup_content, max_width=400, show=False)
+                    popup=folium.Popup(popup_content, max_width=500, show=False)
                 ).add_to(grupo_marcadores)
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
