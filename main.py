@@ -684,50 +684,47 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Renderizado limpio usando elementos de Streamlit nativos en lugar de bloques HTML anidados con fallos
                     with cols_tarjetas[col_idx]:
-                        with st.container():
-                            st.markdown(f"""
-                            <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
-                                <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                    🛡️ PROVINCIA: {provincia_nombre.upper()}
-                                </div>
-                                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
-                                        <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
-                                        <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
-                                        <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
-                                        <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
-                                    </div>
-                                    <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Acciones Clave:</div>
-                                </div>
+                        # Renderizamos la tarjeta limpia usando exclusivamente componentes nativos de Streamlit
+                        st.markdown(f"""
+                        <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
+                            <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
+                                🛡️ PROVINCIA: {provincia_nombre.upper()}
                             </div>
-                            """, unsafe_allow_html=True)
+                            <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
+                                    <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
+                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
+                                    <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
+                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                </div>
+                                <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Inyectamos de forma limpia los elementos activos sin texto plano residual
+                        hay_acciones = False
+                        if c_cap > 0:
+                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
+                            hay_acciones = True
+                        if c_med > 0:
+                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#00ff66; font-size:12px; font-weight:bold;'>• Evacuaciones / Médicas: {c_med}</div>", unsafe_allow_html=True)
+                            hay_acciones = True
+                        if c_dec > 0:
+                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#ffae00; font-size:12px; font-weight:bold;'>• Decomisos / Recuperaciones: {c_dec}</div>", unsafe_allow_html=True)
+                            hay_acciones = True
+                        if c_alt > 0:
+                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#bd00ff; font-size:12px; font-weight:bold;'>• Alteración del Orden: {c_alt}</div>", unsafe_allow_html=True)
+                            hay_acciones = True
+                        if c_fal > 0:
+                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#00c8ff; font-size:12px; font-weight:bold;'>• Faltas Adm. / MINSA: {c_fal}</div>", unsafe_allow_html=True)
+                            hay_acciones = True
                             
-                            # Mostrar únicamente las acciones clave con valores activos (sin ceros ni texto residual)
-                            hay_acciones = False
-                            if c_cap > 0:
-                                st.markdown(f"<span style='color:#ff3333; font-size:12px;'>• Capturas / Aprehensiones: <b>{c_cap}</b></span>", unsafe_allow_html=True)
-                                hay_acciones = True
-                            if c_med > 0:
-                                st.markdown(f"<span style='color:#00ff66; font-size:12px;'>• Evacuaciones / Médicas: <b>{c_med}</b></span>", unsafe_allow_html=True)
-                                hay_acciones = True
-                            if c_dec > 0:
-                                st.markdown(f"<span style='color:#ffae00; font-size:12px;'>• Decomisos / Recuperaciones: <b>{c_dec}</b></span>", unsafe_allow_html=True)
-                                hay_acciones = True
-                            if c_alt > 0:
-                                st.markdown(f"<span style='color:#bd00ff; font-size:12px;'>• Alteración del Orden: <b>{c_alt}</b></span>", unsafe_allow_html=True)
-                                hay_acciones = True
-                            if c_fal > 0:
-                                st.markdown(f"<span style='color:#00c8ff; font-size:12px;'>• Faltas Adm. / MINSA: <b>{c_fal}</b></span>", unsafe_allow_html=True)
-                                hay_acciones = True
-                                
-                            if not hay_acciones:
-                                st.markdown("<span style='color:#94a3b8; font-size:12px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</span>", unsafe_allow_html=True)
-                            
-                            st.markdown("<br>", unsafe_allow_html=True)
+                        if not hay_acciones:
+                            st.markdown("<div style='margin: -15px 0 10px 10px; color:#94a3b8; font-size:11px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</div>", unsafe_allow_html=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
