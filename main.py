@@ -157,7 +157,6 @@ try:
     # FECHAS: Extracción estricta y blindada
     # ---------------------------------------------------------------------
     if col_dia:
-        # Extrae solo la parte de la fecha antes de cualquier espacio (por si viene con horas)
         fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
         df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
 
@@ -172,7 +171,6 @@ try:
         st.markdown("---")
         
         st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
-        # Filtro único de fechas (sin horas)
         fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
         fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
         
@@ -185,22 +183,17 @@ try:
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
     # ---------------------------------------------------------------------
-    # LÓGICA DE FILTRADO (SOLO FECHAS PARA LLAMADAS, FECHAS+CENTRO PARA MAPA)
+    # LÓGICA DE FILTRADO
     # ---------------------------------------------------------------------
-    
-    # 1. Filtro General por Fecha
     df_base_fecha = df.copy()
     if col_dia and 'Fecha_dt' in df_base_fecha.columns:
         df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
     
-    # 2. Base de Datos EXCLUSIVA para las Llamadas (Solo obedece a las Fechas, NO al Centro)
     df_llamadas = df_base_fecha.copy()
 
-    # 3. Base de Datos EXCLUSIVA para el Mapa (Obedece a Fecha y Centro)
     df_mapa = df_base_fecha.copy()
     if col_centro and centro_seleccionado != "TODOS":
         df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
-
 
     # --- MÉTRICAS SUPERIORES DE LLAMADAS ---
     if col_ll_rec:
@@ -237,7 +230,7 @@ try:
         """, unsafe_allow_html=True)
 
     # ---------------------------------------------------------------------
-    # PREPARACIÓN DEL MAPA (USANDO df_mapa CON COORDENADAS LIMPIAS)
+    # PREPARACIÓN DEL MAPA
     # ---------------------------------------------------------------------
     if col_lat and col_lon:
         df_mapa['Lat_clean'] = pd.to_numeric(
@@ -384,10 +377,38 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
+        # --- TABLERO TÁCTICO DE CENTROS (NUEVO) ---
+        if col_centro:
+            st.markdown("""
+                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                        🏢 RESUMEN OPERATIVO POR CENTRO
+                    </h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            resumen_centros = df_geo[col_centro].value_counts().reset_index()
+            resumen_centros.columns = ['Centro', 'Cantidad']
+            
+            cols_c = st.columns(6) 
+            for idx, row in resumen_centros.iterrows():
+                col_idx = idx % 6
+                with cols_c[col_idx]:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
+                        <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                            {row['Centro']}
+                        </div>
+                        <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
+                            {row['Cantidad']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
         # --- TABLERO TÁCTICO DE ZONAS ---
         if col_zona:
             st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
                         📊 RESUMEN OPERATIVO POR ZONA POLICIAL
                     </h3>
