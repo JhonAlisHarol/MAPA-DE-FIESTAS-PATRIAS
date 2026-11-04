@@ -125,7 +125,6 @@ def cargar_datos_bitacora():
     df = df.reset_index(drop=True)
     return df
 
-# Funciones de extracción y limpieza
 def extraer_hora(hora_str):
     try:
         hora_str = str(hora_str).strip()
@@ -138,7 +137,6 @@ def extraer_hora(hora_str):
 def limpiar_numeros_llamadas(val):
     if pd.isna(val) or str(val).strip() == "":
         return 0
-    # Eliminar puntos de miles (ej. 3.890 -> 3890)
     val_str = str(val).replace('.', '').replace(',', '').strip()
     try:
         return int(float(val_str))
@@ -148,25 +146,9 @@ def limpiar_numeros_llamadas(val):
 try:
     df = cargar_datos_bitacora()
 
-    # Limpieza de coordenadas
+    # Identificación de columnas principales
     col_lat = next((c for c in df.columns if "LAT" in c), None)
     col_lon = next((c for c in df.columns if "LON" in c or "LNG" in c), None)
-
-    if col_lat and col_lon:
-        df['Lat_clean'] = pd.to_numeric(
-            df[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-            errors='coerce'
-        )
-        df['Lon_clean'] = pd.to_numeric(
-            df[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-            errors='coerce'
-        )
-        df_geo = df.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
-        df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
-    else:
-        df_geo = pd.DataFrame()
-
-    # Identificación de columnas principales
     col_num = next((c for c in df.columns if "N°" in c or "NO" in c or "ID" in c or "NUM" in c), None)
     col_dia = next((c for c in df.columns if "DIA" in c or "FECHA" in c), None)
     col_hora = next((c for c in df.columns if "HORA" in c), None)
@@ -180,11 +162,16 @@ try:
     col_ll_aban = next((c for c in df.columns if "ABANDONADA" in c), None)
     col_i_crea = next((c for c in df.columns if "CREADO" in c), None)
 
-    # Convertir fechas y horas para el filtro
-    if col_dia and not df_geo.empty:
-        df_geo['Fecha_dt'] = pd.to_datetime(df_geo[col_dia], dayfirst=True, errors='coerce')
-    if col_hora and not df_geo.empty:
-        df_geo['Hora_int'] = df_geo[col_hora].apply(extraer_hora)
+    # ---------------------------------------------------------------------
+    # SOLUCIÓN DE FECHAS: Imposición de formato Latinoamericano exacto
+    # ---------------------------------------------------------------------
+    if col_dia:
+        fecha_extraida = df[col_dia].astype(str).str.extract(r'(\d{1,2}/\d{1,2}/\d{4})')[0]
+        df['Fecha_dt'] = pd.to_datetime(fecha_extraida, format="%d/%m/%Y", errors='coerce')
+        df['Fecha_dt'] = df['Fecha_dt'].fillna(pd.to_datetime(df[col_dia], dayfirst=True, errors='coerce'))
+        
+    if col_hora:
+        df['Hora_int'] = df[col_hora].apply(extraer_hora)
 
     # --- PANEL LATERAL Y FILTROS ---
     with st.sidebar:
@@ -197,7 +184,8 @@ try:
         st.markdown("---")
         
         st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
-        fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 1, 1))
+        # Por defecto muestra desde el inicio de noviembre para no confundir la vista
+        fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
         fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
         
         hora_inicial = st.selectbox("Hora Inicial:", options=list(range(24)), index=0)
@@ -206,33 +194,35 @@ try:
         st.markdown("---")
         
         centro_seleccionado = "TODOS"
-        if col_centro and not df_geo.empty:
+        if col_centro:
             st.markdown("#### 🏢 Centro / Ubicación")
-            lista_centros = ["TODOS"] + sorted([str(x) for x in df_geo[col_centro].dropna().unique() if str(x).strip() != ""])
+            lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
             centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # --- APLICAR FILTROS ---
-    if col_dia and 'Fecha_dt' in df_geo.columns:
-        df_geo = df_geo[(df_geo['Fecha_dt'].dt.date >= fecha_inicio) & (df_geo['Fecha_dt'].dt.date <= fecha_fin)]
+    # ---------------------------------------------------------------------
+    # APLICACIÓN DE FILTROS A TODA LA BASE DE DATOS (INCLUYENDO LLAMADAS)
+    # ---------------------------------------------------------------------
+    df_filtrado = df.copy()
     
-    if col_hora and 'Hora_int' in df_geo.columns:
-        df_geo = df_geo[((df_geo['Hora_int'] >= hora_inicial) & (df_geo['Hora_int'] <= hora_final)) | (df_geo['Hora_int'] == -1)]
+    if col_dia and 'Fecha_dt' in df_filtrado.columns:
+        inicio_ts = pd.Timestamp(fecha_inicio)
+        fin_ts = pd.Timestamp(fecha_fin) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1) # Cubre hasta las 23:59 del último día
+        df_filtrado = df_filtrado[(df_filtrado['Fecha_dt'] >= inicio_ts) & (df_filtrado['Fecha_dt'] <= fin_ts)]
+    
+    if col_hora and 'Hora_int' in df_filtrado.columns:
+        # Si la fila no tiene hora (-1), la pasamos por defecto para no borrar llamadas globales diarias
+        df_filtrado = df_filtrado[((df_filtrado['Hora_int'] >= hora_inicial) & (df_filtrado['Hora_int'] <= hora_final)) | (df_filtrado['Hora_int'] == -1)]
             
     if col_centro and centro_seleccionado != "TODOS":
-        df_geo = df_geo[df_geo[col_centro].astype(str) == centro_seleccionado]
+        df_filtrado = df_filtrado[df_filtrado[col_centro].astype(str) == centro_seleccionado]
 
-    with st.sidebar:
-        st.markdown("---")
-        st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
-
-    # --- MÉTRICAS DE LLAMADAS (DINÁMICAS SEGÚN LA FECHA FILTRADA) ---
+    # --- MÉTRICAS SUPERIORES DE LLAMADAS (DINÁMICAS SEGÚN LA FECHA FILTRADA) ---
     if col_ll_rec:
-        t_rec = sum(df_geo[col_ll_rec].apply(limpiar_numeros_llamadas))
-        t_cont = sum(df_geo[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
-        t_aban = sum(df_geo[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
-        t_crea = sum(df_geo[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
+        t_rec = sum(df_filtrado[col_ll_rec].apply(limpiar_numeros_llamadas))
+        t_cont = sum(df_filtrado[col_ll_cont].apply(limpiar_numeros_llamadas)) if col_ll_cont else 0
+        t_aban = sum(df_filtrado[col_ll_aban].apply(limpiar_numeros_llamadas)) if col_ll_aban else 0
+        t_crea = sum(df_filtrado[col_i_crea].apply(limpiar_numeros_llamadas)) if col_i_crea else 0
         
-        # Matemáticas en vivo para no depender del % pegado en excel
         pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
         
         st.markdown(f"""
@@ -260,7 +250,27 @@ try:
         </div>
         """, unsafe_allow_html=True)
 
-    # --- MAPA ---
+    # ---------------------------------------------------------------------
+    # PREPARACIÓN DEL MAPA (USANDO SOLO FILAS CON COORDENADAS)
+    # ---------------------------------------------------------------------
+    if col_lat and col_lon:
+        df_filtrado['Lat_clean'] = pd.to_numeric(
+            df_filtrado[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+            errors='coerce'
+        )
+        df_filtrado['Lon_clean'] = pd.to_numeric(
+            df_filtrado[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+            errors='coerce'
+        )
+        df_geo = df_filtrado.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
+        df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
+    else:
+        df_geo = pd.DataFrame()
+
+    with st.sidebar:
+        st.markdown("---")
+        st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
+
     modo_mapa = st.radio(
         "Capa de Visualización Táctica:",
         ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
@@ -307,18 +317,15 @@ try:
                     break
 
             html_foto = ""
-            
             if url_img:
                 url_mostrar = url_img 
                 id_foto = ""
-                
                 if "drive.google.com" in url_img:
                     try:
                         if "/d/" in url_img:
                             id_foto = url_img.split("/d/")[1].split("/")[0]
                         elif "id=" in url_img:
                             id_foto = url_img.split("id=")[1].split("&")[0]
-                        
                         if id_foto:
                             url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
                     except:
