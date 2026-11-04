@@ -153,496 +153,501 @@ def limpiar_numeros_llamadas(val):
     except:
         return 0
 
-df = cargar_datos_bitacora()
+# AQUI ESTÁ EL TRY QUE FALTABA PARA EVITAR EL ERROR SYNTAXERROR
+try:
+    df = cargar_datos_bitacora()
 
-if not df.empty:
-    # Identificación blindada de columnas
-    col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
-    col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
-    col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
-    col_dia = next((c for c in df.columns if "DIA" in str(c) or "FECHA" in str(c)), None)
-    col_hora = next((c for c in df.columns if "HORA" in str(c)), None)
-    col_zona = next((c for c in df.columns if "ZONA" in str(c) or "SERVICIO" in str(c)), None)
-    col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
-    col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
-    col_provincia = next((c for c in df.columns if "PROVINCIA" in str(c)), None)
-    
-    # Identificación de Llamadas
-    cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
-    cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
-    cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
-    cols_i_crea = [c for c in df.columns if "CREADO" in str(c)]
-    
-    col_rec_c5 = cols_ll_rec[0] if len(cols_ll_rec) > 0 else None
-    col_rec_corcol = cols_ll_rec[1] if len(cols_ll_rec) > 1 else None
-    col_cont_c5 = cols_ll_cont[0] if len(cols_ll_cont) > 0 else None
-    col_cont_corcol = cols_ll_cont[1] if len(cols_ll_cont) > 1 else None
-    col_aban_c5 = cols_ll_aban[0] if len(cols_ll_aban) > 0 else None
-    col_aban_corcol = cols_ll_aban[1] if len(cols_ll_aban) > 1 else None
-    col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
-    col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
-
-    # FECHAS
-    if col_dia:
-        fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
-        df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
-
-    # --- PANEL LATERAL Y FILTROS ---
-    with st.sidebar:
-        st.markdown("### ⚙️ Panel de Control Operativo")
+    if not df.empty:
+        # Identificación blindada de columnas
+        col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
+        col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
+        col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
+        col_dia = next((c for c in df.columns if "DIA" in str(c) or "FECHA" in str(c)), None)
+        col_hora = next((c for c in df.columns if "HORA" in str(c)), None)
+        col_zona = next((c for c in df.columns if "ZONA" in str(c) or "SERVICIO" in str(c)), None)
+        col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
+        col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
+        col_provincia = next((c for c in df.columns if "PROVINCIA" in str(c)), None)
         
-        if st.button("🔄 Refrescar Bitácora", use_container_width=True):
-            st.cache_data.clear()
-            st.rerun()
+        # Identificación de Llamadas
+        cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
+        cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
+        cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
+        cols_i_crea = [c for c in df.columns if "CREADO" in str(c)]
+        
+        col_rec_c5 = cols_ll_rec[0] if len(cols_ll_rec) > 0 else None
+        col_rec_corcol = cols_ll_rec[1] if len(cols_ll_rec) > 1 else None
+        col_cont_c5 = cols_ll_cont[0] if len(cols_ll_cont) > 0 else None
+        col_cont_corcol = cols_ll_cont[1] if len(cols_ll_cont) > 1 else None
+        col_aban_c5 = cols_ll_aban[0] if len(cols_ll_aban) > 0 else None
+        col_aban_corcol = cols_ll_aban[1] if len(cols_ll_aban) > 1 else None
+        col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
+        col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
+
+        # FECHAS
+        if col_dia:
+            fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
+            df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
+
+        # --- PANEL LATERAL Y FILTROS ---
+        with st.sidebar:
+            st.markdown("### ⚙️ Panel de Control Operativo")
             
-        st.markdown("---")
-        
-        st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
-        fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
-        fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
-        
-        st.markdown("---")
-        
-        centro_seleccionado = "TODOS"
-        if col_centro:
-            st.markdown("#### 🏢 Centro / Ubicación")
-            lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
-            centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
+            if st.button("🔄 Refrescar Bitácora", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
+                
+            st.markdown("---")
+            
+            st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
+            fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
+            fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
+            
+            st.markdown("---")
+            
+            centro_seleccionado = "TODOS"
+            if col_centro:
+                st.markdown("#### 🏢 Centro / Ubicación")
+                lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
+                centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
 
-    # --- LÓGICA DE FILTRADO SEGURO ---
-    df_base_fecha = df.copy()
-    if col_dia and 'Fecha_dt' in df_base_fecha.columns:
-        df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
-    
-    df_llamadas = df_base_fecha.copy()
-    df_mapa = df_base_fecha.copy()
-    if col_centro and centro_seleccionado != "TODOS":
-        df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
+        # --- LÓGICA DE FILTRADO SEGURO ---
+        df_base_fecha = df.copy()
+        if col_dia and 'Fecha_dt' in df_base_fecha.columns:
+            df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
+        
+        df_llamadas = df_base_fecha.copy()
+        df_mapa = df_base_fecha.copy()
+        if col_centro and centro_seleccionado != "TODOS":
+            df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
 
-    # --- MÉTRICAS SUPERIORES DE LLAMADAS (SLA) ---
-    if len(cols_ll_rec) > 0:
-        st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
-        opcion_sla = st.radio(
-            "Centro SLA:",
-            ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
-            horizontal=True,
-            label_visibility="collapsed"
+        # --- MÉTRICAS SUPERIORES DE LLAMADAS (SLA) ---
+        if len(cols_ll_rec) > 0:
+            st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px; margin-top: -10px;'>📡 Centro SLA:</h4>", unsafe_allow_html=True)
+            opcion_sla = st.radio(
+                "Centro SLA:",
+                ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+            st.write("") 
+            
+            def sumar_col(col_name, df_datos):
+                if col_name and col_name in df_datos.columns:
+                    return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
+                return 0
+
+            if "AMBOS" in opcion_sla:
+                t_rec = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
+                t_cont = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
+                t_aban = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
+                t_crea = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
+            elif "CON-C5" in opcion_sla:
+                t_rec = sumar_col(col_rec_c5, df_llamadas)
+                t_cont = sumar_col(col_cont_c5, df_llamadas)
+                t_aban = sumar_col(col_aban_c5, df_llamadas)
+                t_crea = sumar_col(col_crea_c5, df_llamadas)
+            elif "CORCOL" in opcion_sla:
+                t_rec = sumar_col(col_rec_corcol, df_llamadas)
+                t_cont = sumar_col(col_cont_corcol, df_llamadas)
+                t_aban = sumar_col(col_aban_corcol, df_llamadas)
+                t_crea = sumar_col(col_crea_corcol, df_llamadas)
+                
+            pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
+            
+            st.markdown(f"""
+            <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
+                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. RECIBIDAS</div>
+                    <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec:,}</div>
+                </div>
+                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. CONTESTADAS</div>
+                    <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont:,}</div>
+                </div>
+                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. ABANDONADAS</div>
+                    <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban:,}</div>
+                </div>
+                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">INCIDENTES CREADOS</div>
+                    <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea:,}</div>
+                </div>
+                <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                    <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">% PRODUCTIVIDAD</div>
+                    <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod:.1f}%</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # --- PREPARACIÓN DEL MAPA ---
+        if col_lat and col_lon:
+            df_mapa['Lat_clean'] = pd.to_numeric(
+                df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_mapa['Lon_clean'] = pd.to_numeric(
+                df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
+            df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
+        else:
+            df_geo = pd.DataFrame()
+
+        modo_mapa = st.radio(
+            "Capa de Visualización Táctica:",
+            ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
+            index=0,
+            horizontal=True
         )
-        st.write("") 
-        
-        def sumar_col(col_name, df_datos):
-            if col_name and col_name in df_datos.columns:
-                return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
-            return 0
 
-        if "AMBOS" in opcion_sla:
-            t_rec = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
-            t_cont = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
-            t_aban = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
-            t_crea = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
-        elif "CON-C5" in opcion_sla:
-            t_rec = sumar_col(col_rec_c5, df_llamadas)
-            t_cont = sumar_col(col_cont_c5, df_llamadas)
-            t_aban = sumar_col(col_aban_c5, df_llamadas)
-            t_crea = sumar_col(col_crea_c5, df_llamadas)
-        elif "CORCOL" in opcion_sla:
-            t_rec = sumar_col(col_rec_corcol, df_llamadas)
-            t_cont = sumar_col(col_cont_corcol, df_llamadas)
-            t_aban = sumar_col(col_aban_corcol, df_llamadas)
-            t_crea = sumar_col(col_crea_corcol, df_llamadas)
-            
-        pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
-        
-        st.markdown(f"""
-        <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
-            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
-                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. RECIBIDAS</div>
-                <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec:,}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
-                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. CONTESTADAS</div>
-                <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont:,}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
-                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">LL. ABANDONADAS</div>
-                <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban:,}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
-                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">INCIDENTES CREADOS</div>
-                <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea:,}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
-                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">% PRODUCTIVIDAD</div>
-                <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod:.1f}%</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        if not df_geo.empty:
+            lat_centro = df_geo['Lat_clean'].median()
+            lon_centro = df_geo['Lon_clean'].median()
 
-    # --- PREPARACIÓN DEL MAPA ---
-    if col_lat and col_lon:
-        df_mapa['Lat_clean'] = pd.to_numeric(
-            df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-            errors='coerce'
-        )
-        df_mapa['Lon_clean'] = pd.to_numeric(
-            df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-            errors='coerce'
-        )
-        df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
-        df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
-    else:
-        df_geo = pd.DataFrame()
+            m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11, prefer_canvas=True)
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google Hybrid',
+                name='Google Hybrid',
+                overlay=False,
+                control=True
+            ).add_to(m)
 
-    modo_mapa = st.radio(
-        "Capa de Visualización Táctica:",
-        ["🌐 1. Mapa por Grupo (Cluster con Reportes)", "🔥 2. Mapa de Calor (Density)", "📍 3. Incidentes Individuales (Puntos Sueltos)"],
-        index=0,
-        horizontal=True
-    )
+            Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
 
-    if not df_geo.empty:
-        lat_centro = df_geo['Lat_clean'].median()
-        lon_centro = df_geo['Lon_clean'].median()
+            def generar_popup_html(row, idx):
+                num_ev_raw = str(row[col_num]).replace(".0", "") if col_num and pd.notna(row[col_num]) else str(idx + 1)
+                num_ev = num_ev_raw if len(num_ev_raw) <= 15 else str(idx + 1)
+                
+                dia_ev = str(row[col_dia]) if col_dia and pd.notna(row[col_dia]) else 'N/A'
+                hora_ev = str(row[col_hora]) if col_hora and pd.notna(row[col_hora]) else 'N/A'
+                zona_ev = str(row[col_zona]) if col_zona and pd.notna(row[col_zona]) else 'N/A'
+                centro_ev = str(row[col_centro]) if col_centro and pd.notna(row[col_centro]) else 'N/A'
+                raw_rep = str(row[col_rep]) if col_rep and pd.notna(row[col_rep]) else 'Sin detalle registrado'
+                
+                rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
 
-        m = folium.Map(location=[lat_centro, lon_centro], zoom_start=11, prefer_canvas=True)
-        folium.TileLayer(
-            tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-            attr='Google Hybrid',
-            name='Google Hybrid',
-            overlay=False,
-            control=True
-        ).add_to(m)
+                url_img = ""
+                for val in row.values:
+                    val_str = str(val).strip()
+                    if "http" in val_str and ("drive.google.com" in val_str or ".jpg" in val_str or ".png" in val_str):
+                        url_img = val_str
+                        break
+                    elif "drive.google.com" in val_str:
+                        url_img = "https://" + val_str
+                        break
 
-        Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(m)
+                html_foto = ""
+                if url_img:
+                    url_mostrar = url_img 
+                    id_foto = ""
+                    if "drive.google.com" in url_img:
+                        try:
+                            if "/d/" in url_img:
+                                id_foto = url_img.split("/d/")[1].split("/")[0]
+                            elif "id=" in url_img:
+                                id_foto = url_img.split("id=")[1].split("&")[0]
+                            if id_foto:
+                                url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
+                        except:
+                            pass
 
-        def generar_popup_html(row, idx):
-            num_ev_raw = str(row[col_num]).replace(".0", "") if col_num and pd.notna(row[col_num]) else str(idx + 1)
-            num_ev = num_ev_raw if len(num_ev_raw) <= 15 else str(idx + 1)
-            
-            dia_ev = str(row[col_dia]) if col_dia and pd.notna(row[col_dia]) else 'N/A'
-            hora_ev = str(row[col_hora]) if col_hora and pd.notna(row[col_hora]) else 'N/A'
-            zona_ev = str(row[col_zona]) if col_zona and pd.notna(row[col_zona]) else 'N/A'
-            centro_ev = str(row[col_centro]) if col_centro and pd.notna(row[col_centro]) else 'N/A'
-            raw_rep = str(row[col_rep]) if col_rep and pd.notna(row[col_rep]) else 'Sin detalle registrado'
-            
-            rep_limpio = html.escape(raw_rep).replace('\n', '<br>').replace('\r', '')
+                    html_foto = f"""
+                    <div style="margin-top: 10px; text-align: center; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px solid #1b365d;">
+                        <a href="{url_img}" target="_blank" style="text-decoration: none; color: #00ffff; font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; padding: 4px; background: rgba(0,255,255,0.1); border-radius: 4px;">
+                            📸 Abrir Evidencia Original
+                        </a>
+                        <a href="{url_img}" target="_blank">
+                            <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
+                        </a>
+                    </div>
+                    """
 
-            url_img = ""
-            for val in row.values:
-                val_str = str(val).strip()
-                if "http" in val_str and ("drive.google.com" in val_str or ".jpg" in val_str or ".png" in val_str):
-                    url_img = val_str
-                    break
-                elif "drive.google.com" in val_str:
-                    url_img = "https://" + val_str
-                    break
-
-            html_foto = ""
-            if url_img:
-                url_mostrar = url_img 
-                id_foto = ""
-                if "drive.google.com" in url_img:
-                    try:
-                        if "/d/" in url_img:
-                            id_foto = url_img.split("/d/")[1].split("/")[0]
-                        elif "id=" in url_img:
-                            id_foto = url_img.split("id=")[1].split("&")[0]
-                        if id_foto:
-                            url_mostrar = f"https://drive.google.com/thumbnail?id={id_foto}&sz=w800"
-                    except:
-                        pass
-
-                html_foto = f"""
-                <div style="margin-top: 10px; text-align: center; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px solid #1b365d;">
-                    <a href="{url_img}" target="_blank" style="text-decoration: none; color: #00ffff; font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; padding: 4px; background: rgba(0,255,255,0.1); border-radius: 4px;">
-                        📸 Abrir Evidencia Original
-                    </a>
-                    <a href="{url_img}" target="_blank">
-                        <img src="{url_mostrar}" style="width: 100%; max-height: 160px; object-fit: contain; border-radius: 4px;" alt="Evidencia">
-                    </a>
+                return f"""
+                <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c; text-shadow: none;">
+                    <div style="background-color: #1b365d; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 13px;">
+                        🚨 CASO N° {num_ev} — {hora_ev}
+                    </div>
+                    <div style="padding: 8px; border: 1px solid #cbd5e0; background: #ffffff; border-radius: 0 0 4px 4px;">
+                        <p style="margin: 2px 0;"><b>Fecha:</b> {dia_ev}</p>
+                        <p style="margin: 2px 0;"><b>Zona Policial:</b> {zona_ev}</p>
+                        <p style="margin: 2px 0;"><b>Ubicación:</b> {centro_ev}</p>
+                        <div style="background: #f7fafc; border-left: 3px solid #00ffff; padding: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto;">
+                            <b>Reporte:</b><br>{rep_limpio}
+                        </div>
+                        {html_foto}
+                    </div>
                 </div>
                 """
 
-            return f"""
-            <div style="font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #1a202c; text-shadow: none;">
-                <div style="background-color: #1b365d; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 13px;">
-                    🚨 CASO N° {num_ev} — {hora_ev}
-                </div>
-                <div style="padding: 8px; border: 1px solid #cbd5e0; background: #ffffff; border-radius: 0 0 4px 4px;">
-                    <p style="margin: 2px 0;"><b>Fecha:</b> {dia_ev}</p>
-                    <p style="margin: 2px 0;"><b>Zona Policial:</b> {zona_ev}</p>
-                    <p style="margin: 2px 0;"><b>Ubicación:</b> {centro_ev}</p>
-                    <div style="background: #f7fafc; border-left: 3px solid #00ffff; padding: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto;">
-                        <b>Reporte:</b><br>{rep_limpio}
-                    </div>
-                    {html_foto}
-                </div>
-            </div>
-            """
-
-        if "Calor" in modo_mapa:
-            heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
-            HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
-        else:
-            es_cluster = "Cluster" in modo_mapa
-            if es_cluster:
-                grupo_marcadores = MarkerCluster(maxClusterRadius=45, disableClusteringAtZoom=16).add_to(m)
+            if "Calor" in modo_mapa:
+                heat_data = df_geo[['Lat_clean', 'Lon_clean']].values.tolist()
+                HeatMap(heat_data, min_opacity=0.45, max_zoom=14, radius=18, blur=22, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red'}).add_to(m)
             else:
-                grupo_marcadores = m
-
-            for idx, row in df_geo.iterrows():
-                popup_content = generar_popup_html(row, idx)
-
-                icono_patrio = folium.DivIcon(
-                    html=f"""
-                    <div style="
-                        background-color: rgba(11, 15, 25, 0.9);
-                        border: 2px solid #00ffff;
-                        border-radius: 50%;
-                        width: 32px;
-                        height: 32px;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        box-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
-                        overflow: hidden;
-                    ">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" style="width: 20px; height: 14px; object-fit: cover; border-radius: 2px;">
-                    </div>
-                    """
-                )
-
-                folium.Marker(
-                    location=[row['Lat_clean'], row['Lon_clean']],
-                    icon=icono_patrio, 
-                    popup=folium.Popup(popup_content, max_width=320, show=False)
-                ).add_to(grupo_marcadores)
-
-        st_folium(m, height=750, use_container_width=True, returned_objects=[])
-        
-        # --- TABLEROS TÁCTICOS (CENTROS Y ZONAS) ---
-        if col_centro:
-            st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🏢 RESUMEN OPERATIVO POR CENTRO
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-            resumen_centros = df_geo[col_centro].value_counts().reset_index()
-            resumen_centros.columns = ['Centro', 'Cantidad']
-            if not resumen_centros.empty:
-                cols_c = st.columns(6) 
-                for idx, row in resumen_centros.iterrows():
-                    col_idx = idx % 6
-                    with cols_c[col_idx]:
-                        st.markdown(f"""
-                        <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
-                            <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                                {row['Centro']}
-                            </div>
-                            <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
-                                {row['Cantidad']}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-        col_grupo_prov = col_provincia if col_provincia else col_zona
-        
-        if col_rep and col_grupo_prov:
-            st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🎖️ RESUMEN DE EVENTOS Y DELEGACIONES POR PROVINCIA
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            def extraer_delegaciones(texto):
-                if pd.isna(texto): return 0
-                texto_str = str(texto).lower()
-                match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
-                if match:
-                    return int(match.group(1))
-                elif "delegacion" in texto_str or "banda" in texto_str:
-                    return 1
-                return 0
-                
-            df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
-            resumen_prov = df_geo.groupby(col_grupo_prov).agg(
-                Total_Eventos=(col_grupo_prov, 'count'),
-                Total_Delegaciones=('Cant_Delegaciones', 'sum')
-            ).reset_index()
-            resumen_prov.columns = ['Provincia', 'Total_Eventos', 'Total_Delegaciones']
-            
-            if not resumen_prov.empty:
-                cols_del = st.columns(6) 
-                for idx, row in resumen_prov.iterrows():
-                    col_idx = idx % 6
-                    with cols_del[col_idx]:
-                        st.markdown(f"""
-                        <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 0 5px rgba(0,255,100,0.15);">
-                            <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(0,255,100,0.3); padding-bottom: 6px; margin-bottom: 8px; min-height: 28px; display: flex; align-items: center; justify-content: center;">
-                                {row['Provincia']}
-                            </div>
-                            <div style="font-size: 10px; color: #e2e8f0; line-height: 1.8;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: #00ffff; font-weight: bold;">TOTAL EVENTOS:</span> 
-                                    <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Eventos'])}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: #00ff66; font-weight: bold;">TOTAL DELEGACIONES:</span> 
-                                    <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Delegaciones'])}</span>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            else:
-                st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
-
-            # --- DICCIONARIO MAESTRO (BLINDADO CON NUEVAS PALABRAS DE CAPTURAS) ---
-            dict_kws = {
-                "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid', 'indocumentad', 'libar', 'livar', 'oficio', 'alteraci', 'riña', 'agresi', 'agred'],
-                "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
-                "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci', 'incautad', 'sustancia'],
-                "Retención de Licor": ['licor', 'bebida', 'cerveza'],
-                "Artículos Varios Decomisados": ['decomis', 'recuperaci', 'recuperad', 'retenci', 'retenid', 'mercancía', 'artículo', 'vario'],
-                "Alteración del Orden y Convivencia": ['desorden', 'pleito', 'violencia', 'altercado', 'escándalo', 'convivencia'],
-                "Desalojos y Control de Multitudes": ['desalojo', 'desalojad', 'multitud'],
-                "Retención de Carnets (Salud)": ['carnet'],
-                "Destrucción de Alimentos (MINSA)": ['destrucci', 'destruid', 'alimento', 'insalubre'],
-                "Multas, Sanciones y Citaciones": ['multa', 'sancion', 'sancionad', 'citaci', 'citad', 'establecimiento', 'cierre']
-            }
-
-            def extraer_cantidad_accion(texto, palabras_clave):
-                if pd.isna(texto): return 0
-                texto_str = str(texto).lower()
-                
-                texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
-                texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
-                
-                texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
-                texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
-                texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
-                texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
-                texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
-                texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
-                texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
-                
-                total = 0
-                frases = re.split(r'[.;,\n]|\by\b', texto_str)
-                patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
-                
-                for frase in frases:
-                    if re.search(patron_kws, frase):
-                        numeros = re.findall(r'\b(\d+)\b', frase)
-                        if numeros:
-                            total += sum(int(n) for n in numeros)
-                        else:
-                            total += 1 
-                return total
-
-            # --- KPIS SUPERIORES DE ACCIONES ---
-            st.markdown("""
-                <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-
-            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Capturas y Aprehensiones"])).sum()
-            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Atenciones Médicas y Evacuaciones"])).sum()
-            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Decomiso de Armas o Drogas"] + dict_kws["Retención de Licor"] + dict_kws["Artículos Varios Decomisados"])).sum()
-            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Alteración del Orden y Convivencia"] + dict_kws["Desalojos y Control de Multitudes"])).sum()
-            tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Retención de Carnets (Salud)"] + dict_kws["Destrucción de Alimentos (MINSA)"] + dict_kws["Multas, Sanciones y Citaciones"])).sum()
-            
-            c1, c2, c3, c4, c5 = st.columns(5)
-            with c1:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
-                    <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
-                    <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c3:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
-                    <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c4:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
-                    <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c5:
-                st.markdown(f"""
-                <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
-                    <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
-                    <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (BLINDADO) ---
-            st.markdown("""
-                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        📋 DESGLOSE DETALLADO DE ACCIONES POR PROVINCIA
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-
-            df_kpi = df_geo.copy()
-            for nombre_cat, palabras in dict_kws.items():
-                df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
-            
-            resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
-            
-            if not resumen_acciones.empty:
-                resumen_acciones_t = resumen_acciones.T
-                resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
-                
-                resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
-                
-                if not resumen_acciones_t.empty:
-                    resumen_acciones_t = resumen_acciones_t.reset_index()
-                    resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
-                    
-                    df_desglose = resumen_acciones_t
-                    
-                    for col in df_desglose.columns:
-                        if col != 'Acción / Incidente':
-                            df_desglose[col] = df_desglose[col].astype(int)
-                    
-                    col_izq, col_der = st.columns([4, 1])
-                    with col_izq:
-                        st.dataframe(df_desglose, use_container_width=True, hide_index=True)
-                    with col_der:
-                        csv = df_desglose.to_csv(index=False).encode('utf-8')
-                        st.download_button(
-                            label="📥 Descargar Cuadro",
-                            data=csv,
-                            file_name='Desglose_Provincial.csv',
-                            mime='text/csv',
-                        )
+                es_cluster = "Cluster" in modo_mapa
+                if es_cluster:
+                    grupo_marcadores = MarkerCluster(maxClusterRadius=45, disableClusteringAtZoom=16).add_to(m)
                 else:
-                    st.info("No se detectaron acciones policiales o administrativas para desglosar en este rango de fechas.")
-            else:
-                st.info("No hay datos geográficos para agrupar por provincia en este rango.")
+                    grupo_marcadores = m
+
+                for idx, row in df_geo.iterrows():
+                    popup_content = generar_popup_html(row, idx)
+
+                    icono_patrio = folium.DivIcon(
+                        html=f"""
+                        <div style="
+                            background-color: rgba(11, 15, 25, 0.9);
+                            border: 2px solid #00ffff;
+                            border-radius: 50%;
+                            width: 32px;
+                            height: 32px;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            box-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
+                            overflow: hidden;
+                        ">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" style="width: 20px; height: 14px; object-fit: cover; border-radius: 2px;">
+                        </div>
+                        """
+                    )
+
+                    folium.Marker(
+                        location=[row['Lat_clean'], row['Lon_clean']],
+                        icon=icono_patrio, 
+                        popup=folium.Popup(popup_content, max_width=320, show=False)
+                    ).add_to(grupo_marcadores)
+
+            st_folium(m, height=750, use_container_width=True, returned_objects=[])
+            
+            # --- TABLEROS TÁCTICOS (CENTROS Y ZONAS) ---
+            if col_centro:
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                            🏢 RESUMEN OPERATIVO POR CENTRO
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
+                resumen_centros = df_geo[col_centro].value_counts().reset_index()
+                resumen_centros.columns = ['Centro', 'Cantidad']
+                if not resumen_centros.empty:
+                    cols_c = st.columns(6) 
+                    for idx, row in resumen_centros.iterrows():
+                        col_idx = idx % 6
+                        with cols_c[col_idx]:
+                            st.markdown(f"""
+                            <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
+                                <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                                    {row['Centro']}
+                                </div>
+                                <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
+                                    {row['Cantidad']}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+            col_grupo_prov = col_provincia if col_provincia else col_zona
+            
+            if col_rep and col_grupo_prov:
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                            🎖️ RESUMEN DE EVENTOS Y DELEGACIONES POR PROVINCIA
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
                 
+                def extraer_delegaciones(texto):
+                    if pd.isna(texto): return 0
+                    texto_str = str(texto).lower()
+                    match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+                    if match:
+                        return int(match.group(1))
+                    elif "delegacion" in texto_str or "banda" in texto_str:
+                        return 1
+                    return 0
+                    
+                df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
+                resumen_prov = df_geo.groupby(col_grupo_prov).agg(
+                    Total_Eventos=(col_grupo_prov, 'count'),
+                    Total_Delegaciones=('Cant_Delegaciones', 'sum')
+                ).reset_index()
+                resumen_prov.columns = ['Provincia', 'Total_Eventos', 'Total_Delegaciones']
+                
+                if not resumen_prov.empty:
+                    cols_del = st.columns(6) 
+                    for idx, row in resumen_prov.iterrows():
+                        col_idx = idx % 6
+                        with cols_del[col_idx]:
+                            st.markdown(f"""
+                            <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 0 5px rgba(0,255,100,0.15);">
+                                <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(0,255,100,0.3); padding-bottom: 6px; margin-bottom: 8px; min-height: 28px; display: flex; align-items: center; justify-content: center;">
+                                    {row['Provincia']}
+                                </div>
+                                <div style="font-size: 10px; color: #e2e8f0; line-height: 1.8;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #00ffff; font-weight: bold;">TOTAL EVENTOS:</span> 
+                                        <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Eventos'])}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #00ff66; font-weight: bold;">TOTAL DELEGACIONES:</span> 
+                                        <span style="font-size: 13px; font-weight: bold; color: #ffffff;">{int(row['Total_Delegaciones'])}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                else:
+                    st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
+
+                # --- DICCIONARIO MAESTRO (BLINDADO CON NUEVAS PALABRAS DE CAPTURAS) ---
+                dict_kws = {
+                    "Capturas y Aprehensiones": ['captur', 'aprehend', 'aprehens', 'deteni', 'deten', 'conducci', 'conducid', 'indocumentad', 'libar', 'livar', 'oficio', 'alteraci', 'riña', 'agresi', 'agred'],
+                    "Atenciones Médicas y Evacuaciones": ['evacuaci', 'evacuad', 'traslado', 'traslad', 'rescate', 'rescat', 'ambulancia', 'paramédic', 'atendid', 'atenci', 'desmay', 'golpe de calor'],
+                    "Decomiso de Armas o Drogas": ['arma', 'droga', 'incautaci', 'incautad', 'sustancia'],
+                    "Retención de Licor": ['licor', 'bebida', 'cerveza'],
+                    "Artículos Varios Decomisados": ['decomis', 'recuperaci', 'recuperad', 'retenci', 'retenid', 'mercancía', 'artículo', 'vario'],
+                    "Alteración del Orden y Convivencia": ['desorden', 'pleito', 'violencia', 'altercado', 'escándalo', 'convivencia'],
+                    "Desalojos y Control de Multitudes": ['desalojo', 'desalojad', 'multitud'],
+                    "Retención de Carnets (Salud)": ['carnet'],
+                    "Destrucción de Alimentos (MINSA)": ['destrucci', 'destruid', 'alimento', 'insalubre'],
+                    "Multas, Sanciones y Citaciones": ['multa', 'sancion', 'sancionad', 'citaci', 'citad', 'establecimiento', 'cierre']
+                }
+
+                def extraer_cantidad_accion(texto, palabras_clave):
+                    if pd.isna(texto): return 0
+                    texto_str = str(texto).lower()
+                    
+                    texto_str = re.sub(r'\b\d+\s*(?:años|año|pm|am|horas|hora|minutos|hrs)\b', '', texto_str)
+                    texto_str = re.sub(r'\b(?:19|20)\d{2}\b', '', texto_str)
+                    
+                    texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
+                    texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
+                    texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
+                    texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
+                    texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
+                    texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
+                    texto_str = texto_str.replace("siete ", "7 ").replace("ocho ", "8 ").replace("nueve ", "9 ").replace("diez ", "10 ").replace("veinte ", "20 ")
+                    
+                    total = 0
+                    frases = re.split(r'[.;,\n]|\by\b', texto_str)
+                    patron_kws = r'\b(?:' + '|'.join(palabras_clave) + r')'
+                    
+                    for frase in frases:
+                        if re.search(patron_kws, frase):
+                            numeros = re.findall(r'\b(\d+)\b', frase)
+                            if numeros:
+                                total += sum(int(n) for n in numeros)
+                            else:
+                                total += 1 
+                    return total
+
+                # --- KPIS SUPERIORES DE ACCIONES ---
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                            🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Capturas y Aprehensiones"])).sum()
+                tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Atenciones Médicas y Evacuaciones"])).sum()
+                tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Decomiso de Armas o Drogas"] + dict_kws["Retención de Licor"] + dict_kws["Artículos Varios Decomisados"])).sum()
+                tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Alteración del Orden y Convivencia"] + dict_kws["Desalojos y Control de Multitudes"])).sum()
+                tot_faltas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, dict_kws["Retención de Carnets (Salud)"] + dict_kws["Destrucción de Alimentos (MINSA)"] + dict_kws["Multas, Sanciones y Citaciones"])).sum()
+                
+                c1, c2, c3, c4, c5 = st.columns(5)
+                with c1:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                        <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">CAPTURAS / APREHENSIONES</div>
+                        <div style="color: #ff3333; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{tot_capturas}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c2:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                        <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">EVACUACIONES / MÉDICAS</div>
+                        <div style="color: #00ff66; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{tot_evacuaciones}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c3:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                        <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">DECOMISOS / RECUPERACIONES</div>
+                        <div style="color: #ffae00; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{tot_decomisos}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c4:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ALTERACIÓN DEL ORDEN</div>
+                        <div style="color: #bd00ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{tot_alteraciones}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c5:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,200,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 12px; font-weight: bold; margin-bottom: 5px;">FALTAS ADM. / MINSA</div>
+                        <div style="color: #00c8ff; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,200,255,0.7);">{tot_faltas}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (BLINDADO) ---
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                            📋 DESGLOSE DETALLADO DE ACCIONES POR PROVINCIA
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                df_kpi = df_geo.copy()
+                for nombre_cat, palabras in dict_kws.items():
+                    df_kpi[nombre_cat] = df_kpi[col_rep].apply(lambda x: extraer_cantidad_accion(x, palabras))
+                
+                resumen_acciones = df_kpi.groupby(col_grupo_prov)[list(dict_kws.keys())].sum()
+                
+                if not resumen_acciones.empty:
+                    resumen_acciones_t = resumen_acciones.T
+                    resumen_acciones_t['Total General'] = resumen_acciones_t.sum(axis=1)
+                    
+                    resumen_acciones_t = resumen_acciones_t[resumen_acciones_t['Total General'] > 0]
+                    
+                    if not resumen_acciones_t.empty:
+                        resumen_acciones_t = resumen_acciones_t.reset_index()
+                        resumen_acciones_t = resumen_acciones_t.rename(columns={'index': 'Acción / Incidente'})
+                        
+                        df_desglose = resumen_acciones_t
+                        
+                        for col in df_desglose.columns:
+                            if col != 'Acción / Incidente':
+                                df_desglose[col] = df_desglose[col].astype(int)
+                        
+                        col_izq, col_der = st.columns([4, 1])
+                        with col_izq:
+                            st.dataframe(df_desglose, use_container_width=True, hide_index=True)
+                        with col_der:
+                            csv = df_desglose.to_csv(index=False).encode('utf-8')
+                            st.download_button(
+                                label="📥 Descargar Cuadro",
+                                data=csv,
+                                file_name='Desglose_Provincial.csv',
+                                mime='text/csv',
+                            )
+                    else:
+                        st.info("No se detectaron acciones policiales o administrativas para desglosar en este rango de fechas.")
+                else:
+                    st.info("No hay datos geográficos para agrupar por provincia en este rango.")
+                    
+        else:
+            st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
+            
     else:
-        st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
+        st.warning("⚠️ No hay incidentes cargados en la base de datos de Google Sheets.")
         
 except Exception as e:
     st.error(f"Error procesando la bitácora: {e}")
