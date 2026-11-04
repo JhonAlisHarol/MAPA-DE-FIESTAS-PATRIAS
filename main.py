@@ -60,10 +60,11 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* Borde Patriótico con los 3 colores puros resaltados y brillando */
+    /* Contenedor Transparente con Borde Neón Patriótico */
     .neon-title-container {
         border: 4px solid transparent;
-        background: linear-gradient(135deg, rgba(16, 24, 40, 0.9) 0%, rgba(11, 15, 25, 0.9) 100%), 
+        /* El primer 'transparent' elimina el fondo oscuro interno */
+        background: linear-gradient(transparent, transparent), 
                     linear-gradient(90deg, #0000FF 10%, #FFFFFF 50%, #FF0000 90%);
         background-origin: border-box;
         background-clip: padding-box, border-box;
@@ -76,24 +77,25 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* Título con gradiente patriótico y blanco intenso en medio */
+    /* Título con bloques de color definidos: Azul, Blanco y Rojo */
     .neon-title-text {
         font-size: 28px;
         font-weight: 900;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         letter-spacing: 1.5px;
-        background: linear-gradient(90deg, #6699FF 20%, #FFFFFF 50%, #FF6666 80%);
+        background: linear-gradient(90deg, #0000FF 0%, #0000FF 30%, #FFFFFF 45%, #FFFFFF 55%, #FF0000 70%, #FF0000 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+        /* Sombra oscura fuerte para que resalte sin importar el color del fondo */
+        filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.9)); 
     }
     
     .neon-sub-text {
-        color: #e2e8f0;
+        color: #ffffff;
         font-size: 13px;
         font-style: italic;
         margin-top: 8px;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.9);
     }
     </style>
     <div class="bg-overlay"></div>
