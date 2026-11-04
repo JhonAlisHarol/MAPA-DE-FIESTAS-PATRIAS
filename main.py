@@ -158,7 +158,7 @@ def limpiar_numeros_llamadas(val):
 try:
     df = cargar_datos_bitacora()
 
-    # Identificación blindada de columnas principales
+    # Identificación blindada de columnas
     col_lat = next((c for c in df.columns if "LAT" in str(c)), None)
     col_lon = next((c for c in df.columns if "LON" in str(c) or "LNG" in str(c)), None)
     col_num = next((c for c in df.columns if "N°" in str(c) or "NO" in str(c) or "ID" in str(c) or "NUM" in str(c)), None)
@@ -167,11 +167,9 @@ try:
     col_zona = next((c for c in df.columns if "ZONA" in str(c) or "SERVICIO" in str(c)), None)
     col_centro = next((c for c in df.columns if "CENTRO" in str(c) or "LUGAR" in str(c)), None)
     col_rep = next((c for c in df.columns if "REPORTE" in str(c) or "INCIDENTE" in str(c) or "DETALLE" in str(c)), None)
-    
-    # NUEVO: Detección automática de columna PROVINCIA
     col_provincia = next((c for c in df.columns if "PROVINCIA" in str(c)), None)
     
-    # Identificación MÚLTIPLE de columnas de Llamadas
+    # Identificación de Llamadas
     cols_ll_rec = [c for c in df.columns if "RECIBIDA" in str(c)]
     cols_ll_cont = [c for c in df.columns if "CONTESTADA" in str(c)]
     cols_ll_aban = [c for c in df.columns if "ABANDONADA" in str(c)]
@@ -186,9 +184,6 @@ try:
     col_crea_c5 = cols_i_crea[0] if len(cols_i_crea) > 0 else None
     col_crea_corcol = cols_i_crea[1] if len(cols_i_crea) > 1 else None
 
-    # ---------------------------------------------------------------------
-    # FECHAS: Extracción estricta y blindada
-    # ---------------------------------------------------------------------
     if col_dia:
         fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
         df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
@@ -435,7 +430,7 @@ try:
 
         st_folium(m, height=750, use_container_width=True, returned_objects=[])
         
-        # --- TABLERO TÁCTICO DE CENTROS ---
+        # --- TABLEROS TÁCTICOS (CENTROS Y ZONAS) ---
         if col_centro:
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
@@ -444,10 +439,8 @@ try:
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
-            
             resumen_centros = df_geo[col_centro].value_counts().reset_index()
             resumen_centros.columns = ['Centro', 'Cantidad']
-            
             cols_c = st.columns(6) 
             for idx, row in resumen_centros.iterrows():
                 col_idx = idx % 6
@@ -463,36 +456,6 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-        # --- TABLERO TÁCTICO DE ZONAS ---
-        if col_zona:
-            st.markdown("""
-                <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        📊 RESUMEN OPERATIVO POR ZONA POLICIAL
-                    </h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            resumen_zonas = df_geo[col_zona].value_counts().reset_index()
-            resumen_zonas.columns = ['Zona Policial', 'Cantidad']
-            
-            cols = st.columns(6) 
-            for idx, row in resumen_zonas.iterrows():
-                col_idx = idx % 6
-                with cols[col_idx]:
-                    st.markdown(f"""
-                    <div style="background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px; padding: 10px 5px; margin-bottom: 10px; text-align: center; box-shadow: 0 0 5px rgba(0,255,255,0.1);">
-                        <div style="color: #e2e8f0; font-size: 11px; line-height: 1.1; min-height: 25px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                            {row['Zona Policial']}
-                        </div>
-                        <div style="color: #ff3333; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.8);">
-                            {row['Cantidad']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        # --- NUEVO: DELEGACIONES Y EVENTOS (AHORA CON PROVINCIA LIMPIA) ---
-        # Se agrupa prioritariamente por PROVINCIA si existe, de lo contrario por ZONA.
         col_grupo_prov = col_provincia if col_provincia else col_zona
         
         if col_rep and col_grupo_prov:
@@ -515,7 +478,6 @@ try:
                 return 0
                 
             df_geo['Cant_Delegaciones'] = df_geo[col_rep].apply(extraer_delegaciones)
-            
             resumen_prov = df_geo.groupby(col_grupo_prov).agg(
                 Total_Eventos=(col_grupo_prov, 'count'),
                 Total_Delegaciones=('Cant_Delegaciones', 'sum')
@@ -547,23 +509,45 @@ try:
             else:
                 st.markdown("<p style='text-align:center; color:#cbd5e0; font-style: italic;'>No hay eventos registrados en este rango.</p>", unsafe_allow_html=True)
 
-            # 2. Análisis de Acciones Policiales Relevantes
+            # --- MOTOR DE LECTURA POLICIAL PARA ACCIONES RELEVANTES ---
             st.markdown("""
                 <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                        🚨 ACCIONES POLICIALES RELEVANTES
+                        🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)
                     </h3>
                 </div>
             """, unsafe_allow_html=True)
             
-            def contar_kw(texto, kws):
+            def extraer_cantidad_accion(texto, palabras_clave):
                 if pd.isna(texto): return 0
-                return 1 if any(k in str(texto).lower() for k in kws) else 0
+                texto_str = str(texto).lower()
+                
+                # Traductor de escritura policial a números reales
+                texto_str = texto_str.replace("un (01)", "1").replace("un (1)", "1").replace("una (01)", "1").replace("una (1)", "1").replace("un ", "1 ").replace("una ", "1 ")
+                texto_str = texto_str.replace("dos (02)", "2").replace("dos (2)", "2").replace("dos ", "2 ")
+                texto_str = texto_str.replace("tres (03)", "3").replace("tres (3)", "3").replace("tres ", "3 ")
+                texto_str = texto_str.replace("cuatro (04)", "4").replace("cuatro (4)", "4").replace("cuatro ", "4 ")
+                texto_str = texto_str.replace("cinco (05)", "5").replace("cinco (5)", "5").replace("cinco ", "5 ")
+                texto_str = texto_str.replace("seis (06)", "6").replace("seis (6)", "6").replace("seis ", "6 ")
+                
+                total = 0
+                # Analizar oración por oración para no mezclar números
+                frases = re.split(r'[.;\n]', texto_str)
+                for frase in frases:
+                    if any(kw in frase for kw in palabras_clave):
+                        # Extrae todos los números que encuentre pegados a la acción en esa oración
+                        numeros = re.findall(r'\b(\d+)\b', frase)
+                        if numeros:
+                            total += sum(int(n) for n in numeros)
+                        else:
+                            total += 1 # Si no hay número pero está la palabra, asume que es 1 evento
+                return total
 
-            tot_capturas = df_geo[col_rep].apply(lambda x: contar_kw(x, ['captura', 'aprehensi', 'deteni'])).sum()
-            tot_evacuaciones = df_geo[col_rep].apply(lambda x: contar_kw(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia'])).sum()
-            tot_decomisos = df_geo[col_rep].apply(lambda x: contar_kw(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga'])).sum()
-            tot_alteraciones = df_geo[col_rep].apply(lambda x: contar_kw(x, ['alteraci', 'riña', 'desorden', 'pleito'])).sum()
+            # Aplicar el motor a cada categoría
+            tot_capturas = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['captura', 'aprehensi', 'deteni', 'conducci'])).sum()
+            tot_evacuaciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['evacuaci', 'traslado', 'rescate', 'ambulancia', 'paramédic'])).sum()
+            tot_decomisos = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['decomis', 'incautaci', 'recuperaci', 'arma', 'droga', 'retenci', 'licor'])).sum()
+            tot_alteraciones = df_geo[col_rep].apply(lambda x: extraer_cantidad_accion(x, ['alteraci', 'riña', 'desorden', 'pleito', 'agresi', 'agredí'])).sum()
             
             c1, c2, c3, c4 = st.columns(4)
             
