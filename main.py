@@ -612,16 +612,16 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO DE FONDO TIPO PANAMÁ)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (TARJETAS TÉCNICAS REGIONALES LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
+                        📊 PRESENTACIÓN OPERATIVA | RESUMEN REGIONAL POR PROVINCIA ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa estático de la República de Panamá con tarjetas ejecutivas regionales integradas (sin valores en cero).
+                        Distribución técnica ejecutiva. Se muestran exclusivamente los eventos, delegaciones y acciones clave activas por provincia.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -667,11 +667,6 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR ESTILO MAPA ESTÁTICO DE PANAMÁ (IMAGEN REAL DE FONDO) ---
-                st.markdown("""
-                <div style="position: relative; width: 100%; min-height: 800px; background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.4)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
-                """, unsafe_allow_html=True)
-
                 cols_tarjetas = st.columns(3)
                 for index, row in agrupado_prov.iterrows():
                     col_idx = index % 3
@@ -684,7 +679,6 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Construir las acciones clave de forma limpia dentro del HTML de la tarjeta
                     acciones_html = ""
                     if c_cap > 0:
                         acciones_html += f"<div style='color:#ff3333; font-size:12px; font-weight:bold; margin-top:4px;'>• Capturas / Aprehensiones: {c_cap}</div>"
@@ -702,7 +696,7 @@ try:
 
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.94); border: 2px solid rgba(0, 255, 255, 0.8); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 18px rgba(0,255,255,0.3);">
+                        <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
                             <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
                                 🛡️ REGIÓN: {provincia_nombre.upper()}
                             </div>
@@ -720,8 +714,6 @@ try:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-
-                st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
 
