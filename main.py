@@ -29,7 +29,7 @@ st.markdown("""
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-image: linear-gradient(rgba(11, 15, 25, 0.50), rgba(11, 15, 25, 0.50)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-image: linear-gradient(rgba(11, 15, 25, 0.60), rgba(11, 15, 25, 0.60)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
