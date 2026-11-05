@@ -609,19 +609,73 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA DINÁMICO CON CLÚSTER Y TARJETAS INTELIGENTES)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (CON LLAMADAS, ACCIONES Y MAPA DINÁMICO)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO DINÁMICO ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
+                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa interactivo de la República de Panamá con tarjetas ejecutivas agrupadas dinámicamente según el nivel de zoom.
+                        Centro de Control Operativo y Mapa Interactivo con Tarjetas Regionales Integradas.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
+
+            if len(cols_ll_rec) > 0:
+                st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff; margin-bottom: -10px;'>📡 Centro SLA (Presentación):</h4>", unsafe_allow_html=True)
+                opcion_sla_pres = st.radio(
+                    "Centro SLA Pres:",
+                    ["🔴 AMBOS CENTROS (Sumados)", "⚫ CON-C5", "⚫ CORCOL"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="radio_sla_pres_tab"
+                )
+                st.write("") 
+
+                if "AMBOS" in opcion_sla_pres:
+                    t_rec_p = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
+                    t_cont_p = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
+                    t_aban_p = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
+                    t_crea_p = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
+                elif "CON-C5" in opcion_sla_pres:
+                    t_rec_p = sumar_col(col_rec_c5, df_llamadas)
+                    t_cont_p = sumar_col(col_cont_c5, df_llamadas)
+                    t_aban_p = sumar_col(col_aban_c5, df_llamadas)
+                    t_crea_p = sumar_col(col_crea_c5, df_llamadas)
+                elif "CORCOL" in opcion_sla_pres:
+                    t_rec_p = sumar_col(col_rec_corcol, df_llamadas)
+                    t_cont_p = sumar_col(col_cont_corcol, df_llamadas)
+                    t_aban_p = sumar_col(col_aban_corcol, df_llamadas)
+                    t_crea_p = sumar_col(col_crea_corcol, df_llamadas)
+                    
+                pct_prod_p = (t_cont_p / t_rec_p * 100) if t_rec_p > 0 else 0
+                
+                st.markdown(f"""
+                <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px;">LL. RECIBIDAS</div>
+                        <div style="color: #00ffff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{t_rec_p:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(0,255,100,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px;">LL. CONTESTADAS</div>
+                        <div style="color: #00ff66; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{t_cont_p:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,50,50,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px;">LL. ABANDONADAS</div>
+                        <div style="color: #ff3333; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,51,51,0.7);">{t_aban_p:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(255,174,0,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px;">INCIDENTES CREADOS</div>
+                        <div style="color: #ffae00; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(255,174,0,0.7);">{t_crea_p:,}</div>
+                    </div>
+                    <div style="flex: 1; min-width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 0 10px rgba(189,0,255,0.15);">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 5px;">% PRODUCTIVIDAD</div>
+                        <div style="color: #bd00ff; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px rgba(189,0,255,0.7);">{pct_prod_p:.1f}%</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
             if col_rep and col_grupo_prov and not df_base_fecha.empty:
                 df_pres = df_base_fecha.copy()
@@ -664,6 +718,59 @@ try:
                     )
                 ).reset_index()
 
+                # KPIs de Acciones Relevantes en Presentación
+                tot_cap_p = df_pres_kpi["Aprehendidos (Alteración/Riña/Agresión)"].sum() + df_pres_kpi["Aprehendidos (Indocumentados)"].sum() + df_pres_kpi["Aprehendidos (Libar Licor)"].sum() + df_pres_kpi["Aprehendidos (Por Oficio)"].sum() + df_pres_kpi["Otras Capturas y Conducciones"].sum()
+                tot_eva_p = df_pres_kpi["Atenciones Médicas y Evacuaciones"].sum()
+                tot_dec_p = df_pres_kpi["Decomiso de Armas o Drogas"].sum() + df_pres_kpi["Retención de Licor"].sum() + df_pres_kpi["Artículos Varios Decomisados / Recuperados"].sum()
+                tot_alt_p = df_pres_kpi["Desalojos y Desórdenes (Multitudes)"].sum()
+                tot_fal_p = df_pres_kpi["Retención de Carnets (Salud)"].sum() + df_pres_kpi["Destrucción de Alimentos (MINSA)"].sum() + df_pres_kpi["Multas, Sanciones y Citaciones"].sum()
+
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
+                        <h4 style="color: #00ffff; text-shadow: 0 0 8px rgba(0,255,255,0.7);">🚨 ACCIONES POLICIALES RELEVANTES (Auto-Suma)</h4>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                kp1, kp2, kp3, kp4, kp5 = st.columns(5)
+                with kp1:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 50, 50, 0.4); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 4px;">CAPTURAS / APREHENSIONES</div>
+                        <div style="color: #ff3333; font-size: 24px; font-weight: bold;">{int(tot_cap_p)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with kp2:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 100, 0.4); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 4px;">EVACUACIONES / MÉDICAS</div>
+                        <div style="color: #00ff66; font-size: 24px; font-weight: bold;">{int(tot_eva_p)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with kp3:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 174, 0, 0.4); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 4px;">DECOMISOS / RECUPERACIONES</div>
+                        <div style="color: #ffae00; font-size: 24px; font-weight: bold;">{int(tot_dec_p)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with kp4:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(189, 0, 255, 0.4); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 4px;">ALTERACIÓN DEL ORDEN</div>
+                        <div style="color: #bd00ff; font-size: 24px; font-weight: bold;">{int(tot_alt_p)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with kp5:
+                    st.markdown(f"""
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 200, 255, 0.4); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="color: #e2e8f0; font-size: 11px; font-weight: bold; margin-bottom: 4px;">FALTAS ADM. / MINSA</div>
+                        <div style="color: #00c8ff; font-size: 24px; font-weight: bold;">{int(tot_fal_p)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                st.write("")
+
+                # Mapa Interactivo Dinámico con Tarjetas Ancladas
                 coords_provincias = {
                     "BOCAS DEL TORO": [9.3400, -82.2415],
                     "CHIRIQUI": [8.4333, -82.4333],
@@ -681,7 +788,6 @@ try:
                     "GUNA YALA": [9.4235, -78.3888]
                 }
 
-                # Mapa interactivo dinámico con MarkerCluster para evitar amontonamiento con el zoom
                 mapa_dinamico = folium.Map(location=[8.538, -80.7821], zoom_start=8, prefer_canvas=True)
                 folium.TileLayer(
                     tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
@@ -692,8 +798,6 @@ try:
                 ).add_to(mapa_dinamico)
 
                 Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(mapa_dinamico)
-
-                # Usamos MarkerCluster para que el zoom agrupe o expanda las tarjetas inteligentemente
                 cluster_tarjetas = MarkerCluster(maxClusterRadius=30, disableClusteringAtZoom=9).add_to(mapa_dinamico)
 
                 for index, row in agrupado_prov.iterrows():
