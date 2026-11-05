@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA CARTOGRÁFICO DE PANAMÁ CON TARJETAS INTEGRADAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA CARTOGRÁFICO DE FONDO CON TARJETAS LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Vista cartográfica ejecutiva de la República de Panamá con tarjetas técnicas por región (sin valores en cero).
+                        Mapa cartográfico oficial de la República de Panamá con tarjetas técnicas ejecutivas (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -667,10 +667,9 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR CARTOGRÁFICO DE FONDO (MAPA OFICIAL DE RELIEVE DE PANAMÁ) ---
-                # Este contenedor coloca el mapa de relieve real de fondo y dentro ubica ordenadamente las tarjetas ejecutivas
+                # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO ---
                 st.markdown("""
-                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.45), rgba(11, 15, 25, 0.45)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 35px rgba(0,255,255,0.4);">
+                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.4)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
                 """, unsafe_allow_html=True)
 
                 num_cols = 3
@@ -702,15 +701,14 @@ try:
                             if c_fal > 0:
                                 acciones_html += f"<div style='color:#00c8ff; font-size:12px; font-weight:bold; margin-top:4px;'>• Faltas Adm. / MINSA: {c_fal}</div>"
 
-                            # Si no hay acciones clave, omitimos la sección por completo para no saturar con ceros ni textos largos
-                            seccion_acc = f"""
+                            seccion_acciones = f"""
                             <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
                             {acciones_html}
                             """ if acciones_html else ""
 
                             with cols_st[j]:
                                 st.markdown(f"""
-                                <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.8); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 18px rgba(0,255,255,0.35);">
+                                <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.75); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.3);">
                                     <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
                                         🛡️ PROVINCIA: {provincia_nombre.upper()}
                                     </div>
@@ -723,7 +721,7 @@ try:
                                             <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
                                             <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
                                         </div>
-                                        {seccion_acc}
+                                        {seccion_acciones}
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
