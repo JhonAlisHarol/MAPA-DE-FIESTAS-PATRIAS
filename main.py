@@ -185,7 +185,7 @@ try:
             fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
             df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
 
-        # --- MOTOR DE LECTURA ROBUSTO (PARA CÁLCULO DE DELEGACIONES EN SIDEBAR) ---
+        # --- MOTOR DE LECTURA ROBUSTO ---
         categorias_lista = [
             "Aprehendidos (Alteración/Riña/Agresión)",
             "Aprehendidos (Indocumentados)",
@@ -255,6 +255,17 @@ try:
                     
             return pd.Series(res)
 
+        # Cálculo de Delegaciones totales para el Sidebar
+        def extraer_del_sidebar(texto):
+            if pd.isna(texto): return 0
+            texto_str = str(texto).lower()
+            match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+            if match:
+                return int(match.group(1))
+            elif "delegacion" in texto_str or "banda" in texto_str:
+                return 1
+            return 0
+
         # --- PANEL LATERAL Y FILTROS ---
         with st.sidebar:
             st.markdown("### ⚙️ Panel de Control Operativo")
@@ -303,18 +314,6 @@ try:
             df_geo = pd.DataFrame()
 
         col_grupo_prov = col_provincia if col_provincia else col_zona
-
-        # Cálculo de Delegaciones totales para el Sidebar
-        def extraer_del_sidebar(texto):
-            if pd.isna(texto): return 0
-            texto_str = str(texto).lower()
-            match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
-            if match:
-                return int(match.group(1))
-            elif "delegacion" in texto_str or "banda" in texto_str:
-                return 1
-            return 0
-
         total_delegaciones_sidebar = df_base_fecha[col_rep].apply(extraer_del_sidebar).sum() if col_rep in df_base_fecha.columns else 0
 
         with st.sidebar:
@@ -520,6 +519,19 @@ try:
                 df_kpi = df_geo[col_rep].apply(analizar_fila)
                 df_geo_procesado = pd.concat([df_geo, df_kpi], axis=1)
 
+                def extraer_delegaciones_tactico(texto):
+                    if pd.isna(texto): return 0
+                    texto_str = str(texto).lower()
+                    match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+                    if match:
+                        return int(match.group(1))
+                    elif "delegacion" in texto_str or "banda" in texto_str:
+                        return 1
+                    return 0
+
+                df_geo_procesado['Total_Eventos'] = 1
+                df_geo_procesado['Total_Delegaciones'] = df_geo_procesado[col_rep].apply(extraer_delegaciones_tactico)
+
                 # --- KPIS SUPERIORES DE ACCIONES ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
@@ -572,7 +584,50 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (INTACTO) ---
+                # --- TOTAL DE EVENTOS Y DELEGACIONES POR PROVINCIA (TARJETAS ESTILO PRESENTACIÓN) ---
+                st.markdown("""
+                    <div style="text-align: center; margin-top: 35px; margin-bottom: 20px;">
+                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
+                            🛡️ TOTAL DE EVENTOS Y DELEGACIONES POR PROVINCIA
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                resumen_ev_del = df_geo_procesado.groupby(col_grupo_prov).agg(
+                    Total_Eventos=('Total_Eventos', 'sum'),
+                    Total_Delegaciones=('Total_Delegaciones', 'sum')
+                ).reset_index()
+
+                if not resumen_ev_del.empty:
+                    num_cols_prov = 4
+                    filas_p = [resumen_ev_del.iloc[i] for i in range(len(resumen_ev_del))]
+                    for i in range(0, len(filas_p), num_cols_prov):
+                        cols_p = st.columns(num_cols_prov)
+                        for j in range(num_cols_prov):
+                            if i + j < len(filas_p):
+                                r_p = filas_p[i + j]
+                                nom_prov = str(r_p[col_grupo_prov]).upper()
+                                ev_val = int(r_p['Total_Eventos'])
+                                del_val = int(r_p['Total_Delegaciones'])
+                                with cols_p[j]:
+                                    st.markdown(f"""
+                                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: center; box-shadow: 0 0 10px rgba(0,255,255,0.15);">
+                                        <div style="color: #ffffff; font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid rgba(0, 255, 255, 0.3); padding-bottom: 5px;">🛡️ {nom_prov}</div>
+                                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                                            <div>
+                                                <div style="color: #e2e8f0; font-size: 10px; font-weight: bold;">EVENTOS</div>
+                                                <div style="color: #00ffff; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,255,0.7);">{ev_val}</div>
+                                            </div>
+                                            <div style="border-left: 1px dashed rgba(255,255,255,0.2); height: 35px;"></div>
+                                            <div>
+                                                <div style="color: #e2e8f0; font-size: 10px; font-weight: bold;">DELEGACIONES</div>
+                                                <div style="color: #00ff66; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,102,0.7);">{del_val}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (EXACTAMENTE COMO LO TENÍAS) ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -626,7 +681,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (INTACTA Y PERFECTA)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (CON LLAMADAS, ACCIONES Y MAPA DINÁMICO)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
