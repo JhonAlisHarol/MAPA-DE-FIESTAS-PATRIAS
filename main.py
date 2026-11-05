@@ -29,7 +29,7 @@ st.markdown("""
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-image: linear-gradient(rgba(11, 15, 25, 0.65), rgba(11, 15, 25, 0.65)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-image: linear-gradient(rgba(11, 15, 25, 0.70), rgba(11, 15, 25, 0.70)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO DE RELIEVE CON TARJETAS LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO GEOGRÁFICO CON TARJETAS LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -667,10 +667,11 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO ---
-                st.markdown("""
-                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.4)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
-                """, unsafe_allow_html=True)
+                # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO (USANDO ST.IMAGE DIRECTAMENTE) ---
+                st.image("https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png", use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("<h3 style='color: #00ffff; text-align: center; text-shadow: 0 0 10px #00ffff;'>📍 RESUMEN TÉCNICO REGIONAL POR PROVINCIA</h3>", unsafe_allow_html=True)
 
                 num_cols = 3
                 filas_prov = [agrupado_prov.iloc[i] for i in range(len(agrupado_prov))]
@@ -709,7 +710,7 @@ try:
                                     </div>
                                     """, unsafe_allow_html=True)
                                     
-                                    # Inyectamos de forma completamente limpia las acciones clave activas
+                                    # Inyectamos de forma completamente limpia las acciones clave activas sin dejar etiquetas residuales
                                     hay_acc = False
                                     if c_cap > 0:
                                         st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
@@ -730,7 +731,6 @@ try:
                                     if not hay_acc:
                                         st.markdown("<div style='margin: -15px 0 6px 12px; color:#94a3b8; font-size:11px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</div>", unsafe_allow_html=True)
 
-                st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
 
