@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA TÉCNICO ESTÁTICO ESTILO PANAMÁ)
+        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (MAPA TÉCNICO REGIONAL CON TARJETAS LIMPIAS INTEGRADAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa estático regional con síntesis de eventos, delegaciones y acciones clave (sin valores en cero).
+                        Mapa técnico regional integrado. Se muestran exclusivamente los eventos, delegaciones y acciones clave con valores activos por provincia.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -667,7 +667,7 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR TIPO MAPA ESTÁTICO REGIONAL ---
+                # --- CONTENEDOR PRINCIPAL ESTILO MAPA TÉCNICO ---
                 st.markdown("""
                 <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(11, 15, 25, 0.95), rgba(27, 54, 93, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 25px rgba(0,255,255,0.3);">
                 """, unsafe_allow_html=True)
@@ -684,9 +684,25 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
+                    # Construir las acciones clave de forma 100% limpia dentro del HTML de la tarjeta
+                    acciones_html = ""
+                    if c_cap > 0:
+                        acciones_html += f"<div style='color:#ff3333; font-size:12px; font-weight:bold; margin-top:4px;'>• Capturas / Aprehensiones: {c_cap}</div>"
+                    if c_med > 0:
+                        acciones_html += f"<div style='color:#00ff66; font-size:12px; font-weight:bold; margin-top:4px;'>• Evacuaciones / Médicas: {c_med}</div>"
+                    if c_dec > 0:
+                        acciones_html += f"<div style='color:#ffae00; font-size:12px; font-weight:bold; margin-top:4px;'>• Decomisos / Recuperaciones: {c_dec}</div>"
+                    if c_alt > 0:
+                        acciones_html += f"<div style='color:#bd00ff; font-size:12px; font-weight:bold; margin-top:4px;'>• Alteración del Orden: {c_alt}</div>"
+                    if c_fal > 0:
+                        acciones_html += f"<div style='color:#00c8ff; font-size:12px; font-weight:bold; margin-top:4px;'>• Faltas Adm. / MINSA: {c_fal}</div>"
+
+                    if not acciones_html:
+                        acciones_html = "<div style='color:#94a3b8; font-size:11px; font-style:italic; margin-top:4px;'>SIN ACCIONES CLAVE REGISTRADAS</div>"
+
                     with cols_tarjetas[col_idx]:
                         st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
+                        <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
                             <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
                                 🗺️ REGIÓN: {provincia_nombre.upper()}
                             </div>
@@ -700,31 +716,10 @@ try:
                                     <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
                                 </div>
                                 <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
+                                {acciones_html}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-                        
-                        hay_acciones = False
-                        if c_cap > 0:
-                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
-                            hay_acciones = True
-                        if c_med > 0:
-                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#00ff66; font-size:12px; font-weight:bold;'>• Evacuaciones / Médicas: {c_med}</div>", unsafe_allow_html=True)
-                            hay_acciones = True
-                        if c_dec > 0:
-                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#ffae00; font-size:12px; font-weight:bold;'>• Decomisos / Recuperaciones: {c_dec}</div>", unsafe_allow_html=True)
-                            hay_acciones = True
-                        if c_alt > 0:
-                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#bd00ff; font-size:12px; font-weight:bold;'>• Alteración del Orden: {c_alt}</div>", unsafe_allow_html=True)
-                            hay_acciones = True
-                        if c_fal > 0:
-                            st.markdown(f"<div style='margin: -15px 0 10px 10px; color:#00c8ff; font-size:12px; font-weight:bold;'>• Faltas Adm. / MINSA: {c_fal}</div>", unsafe_allow_html=True)
-                            hay_acciones = True
-                            
-                        if not hay_acciones:
-                            st.markdown("<div style='margin: -15px 0 10px 10px; color:#94a3b8; font-size:11px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</div>", unsafe_allow_html=True)
-                        
-                        st.markdown("<br>", unsafe_allow_html=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
