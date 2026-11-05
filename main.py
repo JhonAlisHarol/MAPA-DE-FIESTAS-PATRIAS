@@ -609,7 +609,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA GEOGRÁFICO INTEGRADO CON TARJETAS NATIVAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA INTERACTIVO DE FOLIUM CON TARJETAS ANCLADAS COMO MARCADORES)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -618,7 +618,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Vista cartográfica ejecutiva de la República de Panamá con tarjetas técnicas integradas por región (sin valores en cero).
+                        Mapa interactivo dinámico de la República de Panamá con tarjetas ejecutivas ancladas por provincia (zoom y desplazamiento dinámico).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -664,75 +664,103 @@ try:
                     )
                 ).reset_index()
 
-                # --- MAPA SATELITAL DE FONDO (USANDO LA IMAGEN OFICIAL DE RELIEVE) ---
-                st.image("https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png", use_container_width=True)
+                # Coordenadas geográficas aproximadas para el centro de cada provincia en Panamá
+                coords_provincias = {
+                    "BOCAS DEL TORO": [9.3400, -82.2415],
+                    "CHIRIQUI": [8.4333, -82.4333],
+                    "COCLE": [8.4833, -80.3667],
+                    "COLON": [9.3592, -79.9014],
+                    "HERRERA": [7.9667, -80.4167],
+                    "LOS SANTOS": [7.7833, -80.4167],
+                    "DARIEN": [8.4000, -78.2333],
+                    "PANAMA": [9.1333, -79.3833],
+                    "PANAMA CENTRO": [8.9824, -79.5199],
+                    "PANAMA ESTE": [9.0833, -79.1167],
+                    "PANAMA NORTE": [9.1667, -79.5500],
+                    "PANAMA OESTE": [8.8833, -79.8667],
+                    "VERAGUAS": [8.1167, -81.1333],
+                    "GUNA YALA": [9.4235, -78.3888]
+                }
 
-                st.markdown("""
-                    <div style="text-align: center; margin-top: 30px; margin-bottom: 25px;">
-                        <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
-                            🛡️ TARJETAS EJECUTIVAS POR REGIÓN
-                        </h3>
+                # Creamos el mapa interactivo principal centrado en la República de Panamá
+                mapa_pres_dinamico = folium.Map(location=[8.538, -80.7821], zoom_start=8, prefer_canvas=True)
+                folium.TileLayer(
+                    tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                    attr='Google Hybrid',
+                    name='Google Hybrid',
+                    overlay=False,
+                    control=True
+                ).add_to(mapa_pres_dinamico)
+
+                Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(mapa_pres_dinamico)
+
+                # Anclamos cada tarjeta ejecutiva directamente en las coordenadas geográficas de su provincia
+                for index, row in agrupado_prov.iterrows():
+                    prov_nombre = str(row[col_grupo_prov]).upper().strip()
+                    t_ev = int(row['Total_Eventos'])
+                    t_del = int(row['Total_Delegaciones'])
+                    c_cap = int(row['Capturas_Totales'])
+                    c_med = int(row['Evacuaciones_Totales'])
+                    c_dec = int(row['Decomisos_Totales'])
+                    c_alt = int(row['Alteracion_Totales'])
+                    c_fal = int(row['Faltas_Totales'])
+
+                    # Coordenada por defecto en el centro de Panamá si el nombre no coincide exactamente
+                    lat_lon = coords_provincias.get(prov_nombre, [8.9824, -79.5199])
+
+                    acciones_html = ""
+                    if c_cap > 0:
+                        acciones_html += f"<div style='color:#ff3333; font-size:11px; font-weight:bold; margin-top:3px;'>• Capturas: {c_cap}</div>"
+                    if c_med > 0:
+                        acciones_html += f"<div style='color:#00ff66; font-size:11px; font-weight:bold; margin-top:3px;'>• Médicas/Evac: {c_med}</div>"
+                    if c_dec > 0:
+                        acciones_html += f"<div style='color:#ffae00; font-size:11px; font-weight:bold; margin-top:3px;'>• Decomisos: {c_dec}</div>"
+                    if c_alt > 0:
+                        acciones_html += f"<div style='color:#bd00ff; font-size:11px; font-weight:bold; margin-top:3px;'>• Alteración: {c_alt}</div>"
+                    if c_fal > 0:
+                        acciones_html += f"<div style='color:#00c8ff; font-size:11px; font-weight:bold; margin-top:3px;'>• Faltas Adm: {c_fal}</div>"
+
+                    if not acciones_html:
+                        acciones_html = "<div style='color:#94a3b8; font-size:10px; font-style:italic; margin-top:3px;'>SIN ACCIONES CLAVE</div>"
+
+                    # Tarjeta HTML flotante diseñada para anclarse en el mapa dinámico
+                    card_html = f"""
+                    <div style="
+                        background: rgba(11, 15, 25, 0.95);
+                        border: 2px solid #00ffff;
+                        border-radius: 10px;
+                        padding: 12px;
+                        width: 220px;
+                        box-shadow: 0 0 15px rgba(0,255,255,0.6);
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        color: #ffffff;
+                        text-shadow: none;
+                    ">
+                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px; text-align: center; border-bottom: 2px solid #00ffff;">
+                            🛡️ {prov_nombre}
+                        </div>
+                        <div style="font-size: 11px; line-height: 1.5;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px; margin-bottom: 4px;">
+                                <span style="color: #00ffff; font-weight: bold;">Eventos:</span> 
+                                <span style="font-weight: bold; color: #ffffff;">{t_ev}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 4px; margin-bottom: 6px;">
+                                <span style="color: #00ff66; font-weight: bold;">Delegaciones:</span> 
+                                <span style="font-weight: bold; color: #ffffff;">{t_del}</span>
+                            </div>
+                            <div style="font-weight: bold; color: #ffae00; font-size: 10px; text-transform: uppercase; margin-bottom: 2px;">Acciones Clave:</div>
+                            {acciones_html}
+                        </div>
                     </div>
-                """, unsafe_allow_html=True)
+                    """
 
-                # Renderizado de tarjetas usando columnas nativas para evitar cualquier impresión de código crudo
-                num_cols = 3
-                filas_prov = [agrupado_prov.iloc[i] for i in range(len(agrupado_prov))]
-                
-                for i in range(0, len(filas_prov), num_cols):
-                    cols_st = st.columns(num_cols)
-                    for j in range(num_cols):
-                        if i + j < len(filas_prov):
-                            row = filas_prov[i + j]
-                            provincia_nombre = row[col_grupo_prov]
-                            t_ev = int(row['Total_Eventos'])
-                            t_del = int(row['Total_Delegaciones'])
-                            c_cap = int(row['Capturas_Totales'])
-                            c_med = int(row['Evacuaciones_Totales'])
-                            c_dec = int(row['Decomisos_Totales'])
-                            c_alt = int(row['Alteracion_Totales'])
-                            c_fal = int(row['Faltas_Totales'])
+                    folium.Marker(
+                        location=lat_lon,
+                        icon=folium.DivIcon(html=card_html)
+                    ).add_to(mapa_pres_dinamico)
 
-                            with cols_st[j]:
-                                with st.container():
-                                    st.markdown(f"""
-                                    <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.75); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.3);">
-                                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                            🛡️ PROVINCIA: {provincia_nombre.upper()}
-                                        </div>
-                                        <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
-                                                <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
-                                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
-                                            </div>
-                                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
-                                                <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
-                                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                    
-                                    # Inyectamos acciones clave activas de forma limpia
-                                    hay_acc = False
-                                    if c_cap > 0:
-                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
-                                        hay_acc = True
-                                    if c_med > 0:
-                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#00ff66; font-size:12px; font-weight:bold;'>• Evacuaciones / Médicas: {c_med}</div>", unsafe_allow_html=True)
-                                        hay_acc = True
-                                    if c_dec > 0:
-                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ffae00; font-size:12px; font-weight:bold;'>• Decomisos / Recuperaciones: {c_dec}</div>", unsafe_allow_html=True)
-                                        hay_acc = True
-                                    if c_alt > 0:
-                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#bd00ff; font-size:12px; font-weight:bold;'>• Alteración del Orden: {c_alt}</div>", unsafe_allow_html=True)
-                                        hay_acc = True
-                                    if c_fal > 0:
-                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#00c8ff; font-size:12px; font-weight:bold;'>• Faltas Adm. / MINSA: {c_fal}</div>", unsafe_allow_html=True)
-                                        hay_acc = True
-                                        
-                                    if not hay_acc:
-                                        st.markdown("<div style='margin: -15px 0 6px 12px; color:#94a3b8; font-size:11px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</div>", unsafe_allow_html=True)
+                # Renderizamos el mapa dinámico con las tarjetas ancladas en Streamlit
+                st_folium(mapa_pres_dinamico, height=750, use_container_width=True, returned_objects=[])
 
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
