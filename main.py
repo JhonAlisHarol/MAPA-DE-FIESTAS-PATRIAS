@@ -609,16 +609,16 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA INTERACTIVO DE FOLIUM CON TARJETAS ANCLADAS COMO MARCADORES)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA DINÁMICO CON CLÚSTER Y TARJETAS INTELIGENTES)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
+                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO DINÁMICO ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa interactivo dinámico de la República de Panamá con tarjetas ejecutivas ancladas por provincia (zoom y desplazamiento dinámico).
+                        Mapa interactivo de la República de Panamá con tarjetas ejecutivas agrupadas dinámicamente según el nivel de zoom.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -664,7 +664,6 @@ try:
                     )
                 ).reset_index()
 
-                # Coordenadas geográficas aproximadas para el centro de cada provincia en Panamá
                 coords_provincias = {
                     "BOCAS DEL TORO": [9.3400, -82.2415],
                     "CHIRIQUI": [8.4333, -82.4333],
@@ -682,19 +681,21 @@ try:
                     "GUNA YALA": [9.4235, -78.3888]
                 }
 
-                # Creamos el mapa interactivo principal centrado en la República de Panamá
-                mapa_pres_dinamico = folium.Map(location=[8.538, -80.7821], zoom_start=8, prefer_canvas=True)
+                # Mapa interactivo dinámico con MarkerCluster para evitar amontonamiento con el zoom
+                mapa_dinamico = folium.Map(location=[8.538, -80.7821], zoom_start=8, prefer_canvas=True)
                 folium.TileLayer(
                     tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
                     attr='Google Hybrid',
                     name='Google Hybrid',
                     overlay=False,
                     control=True
-                ).add_to(mapa_pres_dinamico)
+                ).add_to(mapa_dinamico)
 
-                Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(mapa_pres_dinamico)
+                Fullscreen(position="topright", title="Pantalla Completa", title_cancel="Salir").add_to(mapa_dinamico)
 
-                # Anclamos cada tarjeta ejecutiva directamente en las coordenadas geográficas de su provincia
+                # Usamos MarkerCluster para que el zoom agrupe o expanda las tarjetas inteligentemente
+                cluster_tarjetas = MarkerCluster(maxClusterRadius=30, disableClusteringAtZoom=9).add_to(mapa_dinamico)
+
                 for index, row in agrupado_prov.iterrows():
                     prov_nombre = str(row[col_grupo_prov]).upper().strip()
                     t_ev = int(row['Total_Eventos'])
@@ -705,50 +706,48 @@ try:
                     c_alt = int(row['Alteracion_Totales'])
                     c_fal = int(row['Faltas_Totales'])
 
-                    # Coordenada por defecto en el centro de Panamá si el nombre no coincide exactamente
                     lat_lon = coords_provincias.get(prov_nombre, [8.9824, -79.5199])
 
                     acciones_html = ""
                     if c_cap > 0:
-                        acciones_html += f"<div style='color:#ff3333; font-size:11px; font-weight:bold; margin-top:3px;'>• Capturas: {c_cap}</div>"
+                        acciones_html += f"<div style='color:#ff3333; font-size:11px; font-weight:bold; margin-top:2px;'>• Capturas: {c_cap}</div>"
                     if c_med > 0:
-                        acciones_html += f"<div style='color:#00ff66; font-size:11px; font-weight:bold; margin-top:3px;'>• Médicas/Evac: {c_med}</div>"
+                        acciones_html += f"<div style='color:#00ff66; font-size:11px; font-weight:bold; margin-top:2px;'>• Médicas/Evac: {c_med}</div>"
                     if c_dec > 0:
-                        acciones_html += f"<div style='color:#ffae00; font-size:11px; font-weight:bold; margin-top:3px;'>• Decomisos: {c_dec}</div>"
+                        acciones_html += f"<div style='color:#ffae00; font-size:11px; font-weight:bold; margin-top:2px;'>• Decomisos: {c_dec}</div>"
                     if c_alt > 0:
-                        acciones_html += f"<div style='color:#bd00ff; font-size:11px; font-weight:bold; margin-top:3px;'>• Alteración: {c_alt}</div>"
+                        acciones_html += f"<div style='color:#bd00ff; font-size:11px; font-weight:bold; margin-top:2px;'>• Alteración: {c_alt}</div>"
                     if c_fal > 0:
-                        acciones_html += f"<div style='color:#00c8ff; font-size:11px; font-weight:bold; margin-top:3px;'>• Faltas Adm: {c_fal}</div>"
+                        acciones_html += f"<div style='color:#00c8ff; font-size:11px; font-weight:bold; margin-top:2px;'>• Faltas Adm: {c_fal}</div>"
 
                     if not acciones_html:
-                        acciones_html = "<div style='color:#94a3b8; font-size:10px; font-style:italic; margin-top:3px;'>SIN ACCIONES CLAVE</div>"
+                        acciones_html = "<div style='color:#94a3b8; font-size:10px; font-style:italic;'>SIN ACCIONES CLAVE</div>"
 
-                    # Tarjeta HTML flotante diseñada para anclarse en el mapa dinámico
                     card_html = f"""
                     <div style="
-                        background: rgba(11, 15, 25, 0.95);
+                        background: rgba(11, 15, 25, 0.96);
                         border: 2px solid #00ffff;
                         border-radius: 10px;
-                        padding: 12px;
-                        width: 220px;
-                        box-shadow: 0 0 15px rgba(0,255,255,0.6);
+                        padding: 10px;
+                        width: 200px;
+                        box-shadow: 0 0 15px rgba(0,255,255,0.7);
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                         color: #ffffff;
                         text-shadow: none;
                     ">
-                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px; text-align: center; border-bottom: 2px solid #00ffff;">
+                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 5px 8px; border-radius: 5px; font-weight: bold; font-size: 11px; margin-bottom: 6px; text-align: center; border-bottom: 2px solid #00ffff;">
                             🛡️ {prov_nombre}
                         </div>
-                        <div style="font-size: 11px; line-height: 1.5;">
-                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px; margin-bottom: 4px;">
+                        <div style="font-size: 11px; line-height: 1.4;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px; margin-bottom: 3px;">
                                 <span style="color: #00ffff; font-weight: bold;">Eventos:</span> 
                                 <span style="font-weight: bold; color: #ffffff;">{t_ev}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 4px; margin-bottom: 6px;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px; margin-bottom: 4px;">
                                 <span style="color: #00ff66; font-weight: bold;">Delegaciones:</span> 
                                 <span style="font-weight: bold; color: #ffffff;">{t_del}</span>
                             </div>
-                            <div style="font-weight: bold; color: #ffae00; font-size: 10px; text-transform: uppercase; margin-bottom: 2px;">Acciones Clave:</div>
+                            <div style="font-weight: bold; color: #ffae00; font-size: 10px; text-transform: uppercase; margin-bottom: 1px;">Acciones Clave:</div>
                             {acciones_html}
                         </div>
                     </div>
@@ -757,10 +756,9 @@ try:
                     folium.Marker(
                         location=lat_lon,
                         icon=folium.DivIcon(html=card_html)
-                    ).add_to(mapa_pres_dinamico)
+                    ).add_to(cluster_tarjetas)
 
-                # Renderizamos el mapa dinámico con las tarjetas ancladas en Streamlit
-                st_folium(mapa_pres_dinamico, height=750, use_container_width=True, returned_objects=[])
+                st_folium(mapa_dinamico, height=750, use_container_width=True, returned_objects=[])
 
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
