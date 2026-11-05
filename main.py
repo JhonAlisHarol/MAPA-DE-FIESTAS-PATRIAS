@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO DE FONDO TIPO PANAMÁ)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO GEOGRÁFICO CON TARJETAS LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa estático de la República de Panamá con tarjetas ejecutivas regionales integradas (sin valores en cero).
+                        Mapa cartográfico oficial de la República de Panamá con tarjetas técnicas ejecutivas (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -689,42 +689,47 @@ try:
                             c_alt = int(row['Alteracion_Totales'])
                             c_fal = int(row['Faltas_Totales'])
 
-                            acciones_html = ""
-                            if c_cap > 0:
-                                acciones_html += f"<div style='color:#ff3333; font-size:12px; font-weight:bold; margin-top:4px;'>• Capturas / Aprehensiones: {c_cap}</div>"
-                            if c_med > 0:
-                                acciones_html += f"<div style='color:#00ff66; font-size:12px; font-weight:bold; margin-top:4px;'>• Evacuaciones / Médicas: {c_med}</div>"
-                            if c_dec > 0:
-                                acciones_html += f"<div style='color:#ffae00; font-size:12px; font-weight:bold; margin-top:4px;'>• Decomisos / Recuperaciones: {c_dec}</div>"
-                            if c_alt > 0:
-                                acciones_html += f"<div style='color:#bd00ff; font-size:12px; font-weight:bold; margin-top:4px;'>• Alteración del Orden: {c_alt}</div>"
-                            if c_fal > 0:
-                                acciones_html += f"<div style='color:#00c8ff; font-size:12px; font-weight:bold; margin-top:4px;'>• Faltas Adm. / MINSA: {c_fal}</div>"
-
-                            seccion_acciones = f"""
-                            <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
-                            {acciones_html}
-                            """ if acciones_html else ""
-
+                            # Generación limpia de líneas individuales usando componentes de texto de Streamlit para evitar rupturas HTML
                             with cols_st[j]:
-                                st.markdown(f"""
-                                <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.75); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.3);">
-                                    <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                        🛡️ PROVINCIA: {provincia_nombre.upper()}
-                                    </div>
-                                    <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
-                                            <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
-                                            <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                                with st.container():
+                                    st.markdown(f"""
+                                    <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.75); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.3);">
+                                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
+                                            🛡️ PROVINCIA: {provincia_nombre.upper()}
                                         </div>
-                                        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
-                                            <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
-                                            <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                        <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
+                                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
+                                                <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
+                                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
+                                                <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
+                                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                                            </div>
                                         </div>
-                                        {seccion_acciones}
                                     </div>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                    """, unsafe_allow_html=True)
+                                    
+                                    # Inyectamos las acciones clave de manera limpia y nativa si existen
+                                    hay_acc = False
+                                    if c_cap > 0:
+                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
+                                        hay_acc = True
+                                    if c_med > 0:
+                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#00ff66; font-size:12px; font-weight:bold;'>• Evacuaciones / Médicas: {c_med}</div>", unsafe_allow_html=True)
+                                        hay_acc = True
+                                    if c_dec > 0:
+                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ffae00; font-size:12px; font-weight:bold;'>• Decomisos / Recuperaciones: {c_dec}</div>", unsafe_allow_html=True)
+                                        hay_acc = True
+                                    if c_alt > 0:
+                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#bd00ff; font-size:12px; font-weight:bold;'>• Alteración del Orden: {c_alt}</div>", unsafe_allow_html=True)
+                                        hay_acc = True
+                                    if c_fal > 0:
+                                        st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#00c8ff; font-size:12px; font-weight:bold;'>• Faltas Adm. / MINSA: {c_fal}</div>", unsafe_allow_html=True)
+                                        hay_acc = True
+                                        
+                                    if not hay_acc:
+                                        st.markdown("<div style='margin: -15px 0 6px 12px; color:#94a3b8; font-size:11px; font-style:italic;'>SIN ACCIONES CLAVE REGISTRADAS</div>", unsafe_allow_html=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
