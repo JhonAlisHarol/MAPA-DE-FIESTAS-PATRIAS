@@ -29,10 +29,7 @@ st.markdown("""
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-image: linear-gradient(rgba(11, 15, 25, 0.70), rgba(11, 15, 25, 0.70)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
+        background-color: #0b0f19;
         z-index: -99998;
         pointer-events: none;
     }
@@ -44,7 +41,7 @@ st.markdown("""
     }
     
     [data-testid="stSidebar"] {
-        background-color: rgba(10, 10, 15, 0.35) !important;
+        background-color: rgba(10, 10, 15, 0.50) !important;
         border-right: 3px solid transparent;
         border-image: linear-gradient(to bottom, #0000FF, #FFFFFF, #FF0000) 1;
     }
@@ -612,7 +609,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO GEOGRÁFICO CON TARJETAS LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA GEOGRÁFICO DE PANAMÁ CON TARJETAS INTEGRADAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +618,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Vista cartográfica ejecutiva de la República de Panamá con tarjetas técnicas por región (sin valores en cero).
+                        Mapa cartográfico oficial de la República de Panamá con tarjetas técnicas ejecutivas (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -667,11 +664,10 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO (USANDO ST.IMAGE DIRECTAMENTE) ---
+                # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ COMO LIENZO PRINCIPAL ---
                 st.image("https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png", use_container_width=True)
 
-                st.markdown("---")
-                st.markdown("<h3 style='color: #00ffff; text-align: center; text-shadow: 0 0 10px #00ffff;'>📍 RESUMEN TÉCNICO REGIONAL POR PROVINCIA</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='color: #00ffff; text-align: center; text-shadow: 0 0 10px #00ffff; margin-top: 25px;'>🛡️ TARJETAS EJECUTIVAS POR REGIÓN</h3>", unsafe_allow_html=True)
 
                 num_cols = 3
                 filas_prov = [agrupado_prov.iloc[i] for i in range(len(agrupado_prov))]
@@ -710,7 +706,7 @@ try:
                                     </div>
                                     """, unsafe_allow_html=True)
                                     
-                                    # Inyectamos de forma completamente limpia las acciones clave activas sin dejar etiquetas residuales
+                                    # Inyectamos de forma completamente limpia las acciones clave activas
                                     hay_acc = False
                                     if c_cap > 0:
                                         st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
