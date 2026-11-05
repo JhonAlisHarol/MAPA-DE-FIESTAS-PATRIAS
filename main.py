@@ -185,60 +185,7 @@ try:
             fechas_limpias = df[col_dia].astype(str).str.split(' ').str[0]
             df['Fecha_dt'] = pd.to_datetime(fechas_limpias, dayfirst=True, errors='coerce')
 
-        # --- PANEL LATERAL Y FILTROS ---
-        with st.sidebar:
-            st.markdown("### ⚙️ Panel de Control Operativo")
-            
-            if st.button("🔄 Refrescar Bitácora", use_container_width=True):
-                st.cache_data.clear()
-                st.rerun()
-                
-            st.markdown("---")
-            
-            st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
-            fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
-            fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
-            
-            st.markdown("---")
-            
-            centro_seleccionado = "TODOS"
-            if col_centro:
-                st.markdown("#### 🏢 Centro / Ubicación")
-                lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
-                centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
-
-        # --- LÓGICA DE FILTRADO ---
-        df_base_fecha = df.copy()
-        if col_dia and 'Fecha_dt' in df_base_fecha.columns:
-            df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
-        
-        df_llamadas = df_base_fecha.copy()
-        df_mapa = df_base_fecha.copy()
-        if col_centro and centro_seleccionado != "TODOS":
-            df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
-
-        # --- PREPARACIÓN DEL MAPA ---
-        if col_lat and col_lon:
-            df_mapa['Lat_clean'] = pd.to_numeric(
-                df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-                errors='coerce'
-            )
-            df_mapa['Lon_clean'] = pd.to_numeric(
-                df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
-                errors='coerce'
-            )
-            df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
-            df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
-        else:
-            df_geo = pd.DataFrame()
-
-        col_grupo_prov = col_provincia if col_provincia else col_zona
-
-        with st.sidebar:
-            st.markdown("---")
-            st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
-
-        # --- MOTOR DE LECTURA ROBUSTO ---
+        # --- MOTOR DE LECTURA ROBUSTO (PARA CÁLCULO DE DELEGACIONES EN SIDEBAR) ---
         categorias_lista = [
             "Aprehendidos (Alteración/Riña/Agresión)",
             "Aprehendidos (Indocumentados)",
@@ -307,6 +254,73 @@ try:
                     res["Desalojos y Desórdenes (Multitudes)"] += cant
                     
             return pd.Series(res)
+
+        # --- PANEL LATERAL Y FILTROS ---
+        with st.sidebar:
+            st.markdown("### ⚙️ Panel de Control Operativo")
+            
+            if st.button("🔄 Refrescar Bitácora", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
+                
+            st.markdown("---")
+            
+            st.markdown("<h4 style='color: #00ffff; text-shadow: 0 0 5px #00ffff;'>🕒 RANGO TEMPORAL</h4>", unsafe_allow_html=True)
+            fecha_inicio = st.date_input("Desde:", value=datetime.date(2026, 11, 1))
+            fecha_fin = st.date_input("Hasta:", value=datetime.date(2026, 11, 4))
+            
+            st.markdown("---")
+            
+            centro_seleccionado = "TODOS"
+            if col_centro:
+                st.markdown("#### 🏢 Centro / Ubicación")
+                lista_centros = ["TODOS"] + sorted([str(x) for x in df[col_centro].dropna().unique() if str(x).strip() != ""])
+                centro_seleccionado = st.selectbox("Filtrar por centro:", lista_centros)
+
+        # --- LÓGICA DE FILTRADO ---
+        df_base_fecha = df.copy()
+        if col_dia and 'Fecha_dt' in df_base_fecha.columns:
+            df_base_fecha = df_base_fecha[(df_base_fecha['Fecha_dt'].dt.date >= fecha_inicio) & (df_base_fecha['Fecha_dt'].dt.date <= fecha_fin)]
+        
+        df_llamadas = df_base_fecha.copy()
+        df_mapa = df_base_fecha.copy()
+        if col_centro and centro_seleccionado != "TODOS":
+            df_mapa = df_mapa[df_mapa[col_centro].astype(str) == centro_seleccionado]
+
+        # --- PREPARACIÓN DEL MAPA ---
+        if col_lat and col_lon:
+            df_mapa['Lat_clean'] = pd.to_numeric(
+                df_mapa[col_lat].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_mapa['Lon_clean'] = pd.to_numeric(
+                df_mapa[col_lon].astype(str).str.replace(',', '.', regex=False).str.replace(r'[^0-9.\-]', '', regex=True), 
+                errors='coerce'
+            )
+            df_geo = df_mapa.dropna(subset=['Lat_clean', 'Lon_clean']).copy()
+            df_geo = df_geo[(df_geo['Lat_clean'] != 0) & (df_geo['Lon_clean'] != 0)]
+        else:
+            df_geo = pd.DataFrame()
+
+        col_grupo_prov = col_provincia if col_provincia else col_zona
+
+        # Cálculo de Delegaciones totales para el Sidebar
+        def extraer_del_sidebar(texto):
+            if pd.isna(texto): return 0
+            texto_str = str(texto).lower()
+            match = re.search(r'(\d+)\s*(?:delegacion|banda)', texto_str)
+            if match:
+                return int(match.group(1))
+            elif "delegacion" in texto_str or "banda" in texto_str:
+                return 1
+            return 0
+
+        total_delegaciones_sidebar = df_base_fecha[col_rep].apply(extraer_del_sidebar).sum() if col_rep in df_base_fecha.columns else 0
+
+        with st.sidebar:
+            st.markdown("---")
+            st.metric(label="Casos Georreferenciados (Filtrados)", value=f"{len(df_geo):,}")
+            st.metric(label="Total de Delegaciones", value=f"{int(total_delegaciones_sidebar):,}")
 
         # --- SISTEMA DE PESTAÑAS (TABS) ---
         tab_tactico, tab_presentacion = st.tabs(["🗺️ Tablero Operativo Táctico", "📊 Presentación Operaciones"])
@@ -558,7 +572,7 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA ---
+                # --- CUADRO DE EXCEL PARA DESGLOSE POR PROVINCIA (INTACTO) ---
                 st.markdown("""
                     <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
                         <h3 style="color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.7); font-family: 'Segoe UI', sans-serif;">
@@ -612,7 +626,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (CON LLAMADAS, ACCIONES Y MAPA DINÁMICO)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (INTACTA Y PERFECTA)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
