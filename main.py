@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO GEOGRÁFICO CON TARJETAS LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO DE RELIEVE CON TARJETAS LIMPIAS)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa cartográfico oficial de la República de Panamá con tarjetas técnicas ejecutivas (sin valores en cero).
+                        Vista cartográfica ejecutiva de la República de Panamá con tarjetas técnicas por región (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -669,7 +669,7 @@ try:
 
                 # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO ---
                 st.markdown("""
-                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.45), rgba(11, 15, 25, 0.45)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
+                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.4)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
                 """, unsafe_allow_html=True)
 
                 num_cols = 3
@@ -689,7 +689,6 @@ try:
                             c_alt = int(row['Alteracion_Totales'])
                             c_fal = int(row['Faltas_Totales'])
 
-                            # Generación limpia de líneas individuales usando componentes de texto de Streamlit para evitar rupturas HTML
                             with cols_st[j]:
                                 with st.container():
                                     st.markdown(f"""
@@ -710,7 +709,7 @@ try:
                                     </div>
                                     """, unsafe_allow_html=True)
                                     
-                                    # Inyectamos las acciones clave de manera limpia y nativa si existen
+                                    # Inyectamos de forma completamente limpia las acciones clave activas
                                     hay_acc = False
                                     if c_cap > 0:
                                         st.markdown(f"<div style='margin: -15px 0 6px 12px; color:#ff3333; font-size:12px; font-weight:bold;'>• Capturas / Aprehensiones: {c_cap}</div>", unsafe_allow_html=True)
