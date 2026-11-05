@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS VISUALES Y FONDO TÁCTICO DE LA BANDERA ---
+# --- ESTILOS VISUALES Y FONDO TÁCTICO DE LA BANDERA CON SÍMBOLOS PATRIOS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -29,7 +29,10 @@ st.markdown("""
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-color: #0b0f19;
+        background-image: linear-gradient(rgba(11, 15, 25, 0.65), rgba(11, 15, 25, 0.65)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         z-index: -99998;
         pointer-events: none;
     }
@@ -41,7 +44,7 @@ st.markdown("""
     }
     
     [data-testid="stSidebar"] {
-        background-color: rgba(10, 10, 15, 0.50) !important;
+        background-color: rgba(10, 10, 15, 0.45) !important;
         border-right: 3px solid transparent;
         border-image: linear-gradient(to bottom, #0000FF, #FFFFFF, #FF0000) 1;
     }
@@ -341,7 +344,7 @@ try:
                 elif "CORCOL" in opcion_sla:
                     t_rec = sumar_col(col_rec_corcol, df_llamadas)
                     t_cont = sumar_col(col_cont_corcol, df_llamadas)
-                    t_aban = sumar_col(col_aban_corcol, df_llamadas)
+                    t_aban = sumar_col(col_aban_c5, df_llamadas)
                     t_crea = sumar_col(col_crea_corcol, df_llamadas)
                     
                 pct_prod = (t_cont / t_rec * 100) if t_rec > 0 else 0
@@ -634,21 +637,26 @@ try:
                 )
                 st.write("") 
 
+                def sumar_col_pres(col_name, df_datos):
+                    if col_name and col_name in df_datos.columns:
+                        return sum(df_datos[col_name].apply(limpiar_numeros_llamadas))
+                    return 0
+
                 if "AMBOS" in opcion_sla_pres:
-                    t_rec_p = sumar_col(col_rec_c5, df_llamadas) + sumar_col(col_rec_corcol, df_llamadas)
-                    t_cont_p = sumar_col(col_cont_c5, df_llamadas) + sumar_col(col_cont_corcol, df_llamadas)
-                    t_aban_p = sumar_col(col_aban_c5, df_llamadas) + sumar_col(col_aban_corcol, df_llamadas)
-                    t_crea_p = sumar_col(col_crea_c5, df_llamadas) + sumar_col(col_crea_corcol, df_llamadas)
+                    t_rec_p = sumar_col_pres(col_rec_c5, df_llamadas) + sumar_col_pres(col_rec_corcol, df_llamadas)
+                    t_cont_p = sumar_col_pres(col_cont_c5, df_llamadas) + sumar_col_pres(col_cont_corcol, df_llamadas)
+                    t_aban_p = sumar_col_pres(col_aban_c5, df_llamadas) + sumar_col_pres(col_aban_corcol, df_llamadas)
+                    t_crea_p = sumar_col_pres(col_crea_c5, df_llamadas) + sumar_col_pres(col_crea_corcol, df_llamadas)
                 elif "CON-C5" in opcion_sla_pres:
-                    t_rec_p = sumar_col(col_rec_c5, df_llamadas)
-                    t_cont_p = sumar_col(col_cont_c5, df_llamadas)
-                    t_aban_p = sumar_col(col_aban_c5, df_llamadas)
-                    t_crea_p = sumar_col(col_crea_c5, df_llamadas)
+                    t_rec_p = sumar_col_pres(col_rec_c5, df_llamadas)
+                    t_cont_p = sumar_col_pres(col_cont_c5, df_llamadas)
+                    t_aban_p = sumar_col_pres(col_aban_c5, df_llamadas)
+                    t_crea_p = sumar_col_pres(col_crea_c5, df_llamadas)
                 elif "CORCOL" in opcion_sla_pres:
-                    t_rec_p = sumar_col(col_rec_corcol, df_llamadas)
-                    t_cont_p = sumar_col(col_cont_corcol, df_llamadas)
-                    t_aban_p = sumar_col(col_aban_corcol, df_llamadas)
-                    t_crea_p = sumar_col(col_crea_corcol, df_llamadas)
+                    t_rec_p = sumar_col_pres(col_rec_corcol, df_llamadas)
+                    t_cont_p = sumar_col_pres(col_cont_corcol, df_llamadas)
+                    t_aban_p = sumar_col_pres(col_aban_corcol, df_llamadas)
+                    t_crea_p = sumar_col_pres(col_crea_corcol, df_llamadas)
                     
                 pct_prod_p = (t_cont_p / t_rec_p * 100) if t_rec_p > 0 else 0
                 
@@ -718,7 +726,6 @@ try:
                     )
                 ).reset_index()
 
-                # KPIs de Acciones Relevantes en Presentación
                 tot_cap_p = df_pres_kpi["Aprehendidos (Alteración/Riña/Agresión)"].sum() + df_pres_kpi["Aprehendidos (Indocumentados)"].sum() + df_pres_kpi["Aprehendidos (Libar Licor)"].sum() + df_pres_kpi["Aprehendidos (Por Oficio)"].sum() + df_pres_kpi["Otras Capturas y Conducciones"].sum()
                 tot_eva_p = df_pres_kpi["Atenciones Médicas y Evacuaciones"].sum()
                 tot_dec_p = df_pres_kpi["Decomiso de Armas o Drogas"].sum() + df_pres_kpi["Retención de Licor"].sum() + df_pres_kpi["Artículos Varios Decomisados / Recuperados"].sum()
@@ -770,7 +777,7 @@ try:
 
                 st.write("")
 
-                # Mapa Interactivo Dinámico con Tarjetas Ancladas
+                # Mapa Dinámico con Tarjetas Ancladas
                 coords_provincias = {
                     "BOCAS DEL TORO": [9.3400, -82.2415],
                     "CHIRIQUI": [8.4333, -82.4333],
