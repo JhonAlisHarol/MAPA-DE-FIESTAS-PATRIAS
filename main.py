@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA CARTOGRÁFICO DE FONDO CON TARJETAS LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA ESTÁTICO DE FONDO TIPO PANAMÁ)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -621,7 +621,7 @@ try:
                         📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Mapa cartográfico oficial de la República de Panamá con tarjetas técnicas ejecutivas (sin valores en cero).
+                        Mapa estático de la República de Panamá con tarjetas ejecutivas regionales integradas (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -669,7 +669,7 @@ try:
 
                 # --- CONTENEDOR CON EL MAPA DE RELIEVE REAL DE PANAMÁ DE FONDO ---
                 st.markdown("""
-                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.4), rgba(11, 15, 25, 0.4)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
+                <div style="position: relative; width: 100%; background-image: linear-gradient(rgba(11, 15, 25, 0.45), rgba(11, 15, 25, 0.45)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Panama_relieve.png'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 30px rgba(0,255,255,0.4);">
                 """, unsafe_allow_html=True)
 
                 num_cols = 3
