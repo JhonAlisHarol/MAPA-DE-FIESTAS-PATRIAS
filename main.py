@@ -612,16 +612,16 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERACIONES (TARJETAS TÉCNICAS REGIONALES)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (MAPA TÉCNICO ESTÁTICO ESTILO PANAMÁ)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
                 <div style="background: rgba(15, 23, 42, 0.85); border: 2px solid #00ffff; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
                     <h2 style="color: #00ffff; text-align: center; margin: 0; font-family: 'Segoe UI', sans-serif; text-shadow: 0 0 10px #00ffff;">
-                        📊 PRESENTACIÓN OPERATIVA | RESUMEN REGIONAL POR PROVINCIA ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
+                        📊 PRESENTACIÓN OPERATIVA | MAPA TÉCNICO REGIONAL ({fecha_inicio.strftime('%d/%m/%Y')} AL {fecha_fin.strftime('%d/%m/%Y')})
                     </h2>
                     <p style="color: #e2e8f0; text-align: center; font-style: italic; margin-top: 5px; font-size: 14px;">
-                        Distribución técnica ejecutiva. Se muestran exclusivamente las acciones clave con valores activos por provincia.
+                        Mapa estático regional con síntesis de eventos, delegaciones y acciones clave (sin valores en cero).
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -667,7 +667,7 @@ try:
                     )
                 ).reset_index()
 
-                # --- CONTENEDOR ESTILO MAPA TÉCNICO DE FONDO ---
+                # --- CONTENEDOR TIPO MAPA ESTÁTICO REGIONAL ---
                 st.markdown("""
                 <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(11, 15, 25, 0.95), rgba(27, 54, 93, 0.85)), url('https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg'); background-size: cover; background-position: center; border: 3px solid #00ffff; border-radius: 16px; padding: 25px; box-shadow: 0 0 25px rgba(0,255,255,0.3);">
                 """, unsafe_allow_html=True)
@@ -688,7 +688,7 @@ try:
                         st.markdown(f"""
                         <div style="background: rgba(11, 15, 25, 0.92); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
                             <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                🛡️ PROVINCIA: {provincia_nombre.upper()}
+                                🗺️ REGIÓN: {provincia_nombre.upper()}
                             </div>
                             <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
                                 <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
