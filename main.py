@@ -29,7 +29,7 @@ st.markdown("""
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-image: linear-gradient(rgba(11, 15, 25, 0.60), rgba(11, 15, 25, 0.60)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
+        background-image: linear-gradient(rgba(11, 15, 25, 0.65), rgba(11, 15, 25, 0.65)), url("https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -612,7 +612,7 @@ try:
                 st.warning("⚠️ No hay incidentes para mostrar con los filtros seleccionados o faltan coordenadas.")
 
         # ==========================================
-        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (TARJETAS TÉCNICAS REGIONALES LIMPIAS)
+        # PESTAÑA 2: PRESENTACIÓN OPERATIVA (TARJETAS TÉCNICAS EN GRID PERFECTO)
         # ==========================================
         with tab_presentacion:
             st.markdown(f"""
@@ -667,9 +667,10 @@ try:
                     )
                 ).reset_index()
 
-                cols_tarjetas = st.columns(3)
+                # Construimos un contenedor Grid HTML puro para asegurar alineación perfecta de 3 columnas fijas
+                tarjetas_html = "<div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;'>"
+                
                 for index, row in agrupado_prov.iterrows():
-                    col_idx = index % 3
                     provincia_nombre = row[col_grupo_prov]
                     t_ev = int(row['Total_Eventos'])
                     t_del = int(row['Total_Delegaciones'])
@@ -694,26 +695,28 @@ try:
                     if not acciones_html:
                         acciones_html = "<div style='color:#94a3b8; font-size:11px; font-style:italic; margin-top:4px;'>SIN ACCIONES CLAVE REGISTRADAS</div>"
 
-                    with cols_tarjetas[col_idx]:
-                        st.markdown(f"""
-                        <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; margin-bottom: 22px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
-                            <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
-                                🛡️ REGIÓN: {provincia_nombre.upper()}
-                            </div>
-                            <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
-                                    <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
-                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
-                                    <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
-                                    <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
-                                </div>
-                                <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
-                                {acciones_html}
-                            </div>
+                    tarjetas_html += f"""
+                    <div style="background: rgba(11, 15, 25, 0.95); border: 2px solid rgba(0, 255, 255, 0.7); border-radius: 12px; padding: 18px; box-shadow: 0 0 15px rgba(0,255,255,0.25);">
+                        <div style="background: linear-gradient(90deg, #1b365d, #0b0f19); color: #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 14px; text-align: center; border-bottom: 2px solid #00ffff; letter-spacing: 1px;">
+                            🛡️ REGIÓN: {provincia_nombre.upper()}
                         </div>
-                        """, unsafe_allow_html=True)
+                        <div style="font-size: 13px; color: #e2e8f0; line-height: 1.8;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px;">
+                                <span style="color: #00ffff; font-weight: bold;">Total Eventos:</span> 
+                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_ev}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
+                                <span style="color: #00ff66; font-weight: bold;">Total Delegaciones:</span> 
+                                <span style="font-weight: bold; color: #ffffff; font-size: 14px;">{t_del}</span>
+                            </div>
+                            <div style="margin-top: 6px; font-weight: bold; color: #ffae00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Acciones Clave:</div>
+                            {acciones_html}
+                        </div>
+                    </div>
+                    """
+
+                tarjetas_html += "</div>"
+                st.markdown(tarjetas_html, unsafe_allow_html=True)
             else:
                 st.info("ℹ️ No hay registros suficientes en el rango de fechas seleccionado para generar la presentación técnica regional.")
 
